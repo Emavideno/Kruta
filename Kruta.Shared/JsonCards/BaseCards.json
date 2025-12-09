@@ -1,0 +1,55 @@
+[
+  // --- ТИП: ЗНАК (Шаблон, 30 копий) ---
+  {
+    "id": "SIGN_TEMPLATE",
+    "title": "Знак",
+    "card_type": "Знак",
+    "cost": 0,
+    "power_gems": 0,
+    "set_id": "K",
+    "total_copies": 30, // <-- Количество для генерации в начале игры
+    "power_mod": 1,
+    "is_attack": false,
+    "attack_logic": null
+  },
+
+  // --- ТИП: ПАЛОЧКА (Шаблон, 5 копий) ---
+  {
+    "id": "WAND_TEMPLATE",
+    "title": "Палочка",
+    "card_type": "Палочка",
+    "cost": 0,
+    "power_gems": 0,
+    "set_id": "K",
+    "total_copies": 5, // <-- Количество для генерации в начале игры
+    "power_mod": 1,
+    "is_attack": true,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target_Conditional_Draw",
+        "target_type": "Selected_Enemy",
+        "damage": 1,
+        "payload": {
+          "condition": "Target_Died",
+          "action": "Draw_Cards",
+          "amount": 2
+        }
+      }
+    ]
+  },
+
+  // --- ТИП: ПШИК (Шаблон, 15 копий) ---
+  {
+    "id": "POOF_TEMPLATE",
+    "title": "Пшик",
+    "card_type": "Пшик",
+    "cost": 0,
+    "power_gems": 0,
+    "set_id": "K",
+    "total_copies": 15, // <-- Количество для генерации в начале игры
+    "power_mod": 0,
+    "is_attack": false,
+    "attack_logic": null
+  }
+]
