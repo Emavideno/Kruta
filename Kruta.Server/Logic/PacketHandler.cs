@@ -1,79 +1,146 @@
 ﻿using System;
-using System.Collections.Generic;
-using Kruta.Shared.Network.Enums;
-using Kruta.Shared.Network.Protocol;
-using Kruta.Shared.Network.Messages.ClientMessages; // Для десериализации
+using System.Threading.Tasks;
+using Kruta.Shared.XProtocol; // Для XPacket и XPacketConverter
+using Kruta.Shared.XMessages;
+using Kruta.Shared.XMessages.ClientMessages; // Для клиентских сообщений (AuthMessage, PlayCardMessage и т.д.)
+using Kruta.Shared.XMessages.ServerMessages; // Для серверных сообщений (ErrorMessage)
 using Kruta.Server.Networking; // Для ClientConnection
-using System.Text.Json; // Для десериализации
+using Kruta.Server.Logic; // Для IGameSessionManager
 
 namespace Kruta.Server.Logic
 {
+    // В ClientConnection мы используем IGameSessionManager, 
+    // поэтому PacketHandler должен быть частью класса/системы, 
+    // которая управляет сессиями (например, GameEngine).
     public class PacketHandler
     {
-        // В реальной игре здесь должна быть ссылка на GameEngine
-        // private readonly GameEngine _gameEngine = new GameEngine(); 
 
-        public async Task HandlePacketAsync(ClientConnection connection, Packet packet)
+        // В реальной игре здесь должна быть ссылка на IGameSessionManager/GameEngine
+        private readonly IGameSessionManager _sessionManager;
+
+        // Для демонстрации: счетчик игроков
+        private int _playerIdCounter = 1;
+
+        public PacketHandler(IGameSessionManager sessionManager)
         {
-            Console.WriteLine($"[HANDLER] Получен пакет типа: {packet.Type} от клиента {connection.PlayerId}");
+            _sessionManager = sessionManager;
+        }
 
-            // Используем switch по типу сообщения для десериализации в нужный класс
-            switch (packet.Type)
+        /// <summary>
+        /// Обрабатывает входящий XPacket от клиента.
+        /// </summary>
+        public async Task HandlePacketAsync(ClientConnection connection, XPacket xpacket)
+        {
+            var packetType = XPacketTypeManager.GetTypeFromPacket(xpacket);
+
+            // В XProtocol ClientConnection уже обрабатывает Handshake и Auth (аутентификацию).
+            // Здесь мы ожидаем только игровые команды.
+            Console.WriteLine($"[HANDLER] Получен пакет типа: {packetType} от клиента {connection.ClientId}");
+
+            switch (packetType)
             {
-                case MessageType.Auth:
-                    // 1. Десериализуем AuthMessage
-                    var authMessage = packet.Deserialize<AuthMessage>();
-
-                    // 2. Выполняем логику аутентификации/регистрации
-                    int newPlayerId = RegisterPlayer(authMessage.PlayerName);
-                    connection.PlayerId = newPlayerId;
-
-                    // 3. Отправляем ответ Welcome
-                    // await connection.SendMessageAsync(new WelcomeMessage { PlayerId = newPlayerId }); // Если нужно WelcomeMessage
-
+                case XPacketType.Auth:
+                    // Auth уже должен быть обработан в ClientConnection, 
+                    // но если мы хотим централизовать логику регистрации, 
+                    // мы можем вызвать ее здесь.
+                    ProcessAuth(connection, xpacket);
                     break;
 
-                case MessageType.PlayCard:
-                    var playCardMsg = packet.Deserialize<PlayCardMessage>();
-                    // _gameEngine.ProcessPlayCard(connection.PlayerId, playCardMsg.CardId, playCardMsg.TargetPlayerId);
-
-                    // Заглушка:
-                    Console.WriteLine($"Игрок {connection.PlayerId} хочет сыграть карту {playCardMsg.CardId}");
-
+                case XPacketType.PlayCard:
+                    ProcessPlayCard(connection, xpacket);
                     break;
 
-                case MessageType.BuyCard:
-                    var buyCardMsg = packet.Deserialize<BuyCardMessage>();
-                    // _gameEngine.ProcessBuyCard(connection.PlayerId, buyCardMsg.CardId, buyCardMsg.Source);
-
-                    // Заглушка:
-                    Console.WriteLine($"Игрок {connection.PlayerId} хочет купить {buyCardMsg.CardId} из {buyCardMsg.Source}");
-
+                case XPacketType.BuyCard:
+                    ProcessBuyCard(connection, xpacket);
                     break;
 
-                // ... (Обработка всех остальных MessageType) ...
+                case XPacketType.EndTurn:
+                    ProcessEndTurn(connection, xpacket);
+                    break;
 
-                case MessageType.EndTurn:
-                    // _gameEngine.ProcessEndTurn(connection.PlayerId);
-                    Console.WriteLine($"Игрок {connection.PlayerId} завершает ход.");
+                case XPacketType.Handshake:
+                    // Handshake должен быть обработан в ClientConnection
+                    Console.WriteLine("[WARNING] Пакет Handshake получен в Game Logic (пропущен).");
                     break;
 
                 default:
-                    Console.WriteLine($"[WARNING] Неизвестный тип пакета: {packet.Type}");
+                    Console.WriteLine($"[WARNING] Неизвестный или неожиданный тип пакета в логике: {packetType}");
+                    // Отправляем ошибку клиенту (используем метод из ClientConnection)
+                    connection.QueuePacketSend(CreateErrorPacket("Неизвестная команда."));
                     break;
             }
 
-            // После любого действия (Play, Buy, EndTurn) сервер должен отправить всем клиентам
-            // новое состояние игры:
-            // await BroadcastGameState(currentGameState);
+            // После любого действия (Play, Buy, EndTurn) 
+            // должен вызываться метод для обновления состояния игры и рассылки GameState
+            // _sessionManager.BroadcastGameState(); 
         }
 
-        private int _playerIdCounter = 1;
+        // === МЕТОДЫ ОБРАБОТКИ ИГРОВЫХ КОМАНД ===
+
+        private void ProcessAuth(ClientConnection connection, XPacket xpacket)
+        {
+            // 1. Десериализация Value Types
+            var authMsg = XPacketConverter.Deserialize<AuthMessage>(xpacket);
+
+            // 2. Десериализация строки (ручная)
+            authMsg.DeserializeString(xpacket);
+
+            // В ClientConnection мы уже проверили версию протокола.
+
+            // 3. Выполняем логику регистрации
+            int newPlayerId = RegisterPlayer(authMsg.PlayerName);
+            //connection.PlayerId = newPlayerId; // В ClientConnection уже присвоен ClientId
+
+            Console.WriteLine($"[LOGIC] Игрок {authMsg.PlayerName} успешно зарегистрирован с ID: {newPlayerId}");
+
+            // Тут можно отправить Welcome/GameStateUpdate
+        }
+
+        private void ProcessPlayCard(ClientConnection connection, XPacket xpacket)
+        {
+            var playCardMsg = XPacketConverter.Deserialize<PlayCardMessage>(xpacket);
+
+            Console.WriteLine($"[LOGIC] Игрок {connection.ClientId} хочет сыграть карту {playCardMsg.CardId} на игрока {playCardMsg.TargetPlayerId}.");
+
+            // _sessionManager.ProcessPlayCard(connection.ClientId, playCardMsg.CardId, playCardMsg.TargetPlayerId);
+        }
+
+        private void ProcessBuyCard(ClientConnection connection, XPacket xpacket)
+        {
+            var buyCardMsg = XPacketConverter.Deserialize<BuyCardMessage>(xpacket);
+
+            // Обратите внимание: старое поле Source убрано, используем только CardIdToBuy
+            Console.WriteLine($"[LOGIC] Игрок {connection.ClientId} хочет купить карту ID: {buyCardMsg.CardIdToBuy}.");
+
+            // _sessionManager.ProcessBuyCard(connection.ClientId, buyCardMsg.CardIdToBuy);
+        }
+
+        private void ProcessEndTurn(ClientConnection connection, XPacket xpacket)
+        {
+            // EndTurnMessage не содержит полей, но его нужно десериализовать для проверки типа
+            // var endTurnMsg = XPacketConverter.Deserialize<EndTurnMessage>(xpacket); 
+
+            Console.WriteLine($"[LOGIC] Игрок {connection.ClientId} завершает ход.");
+
+            // _sessionManager.ProcessEndTurn(connection.ClientId);
+        }
+
+        // === ВСПОМОГАТЕЛЬНЫЕ МЕТОДЫ ===
+
         private int RegisterPlayer(string name)
         {
-            Console.WriteLine($"[LOGIC] Регистрируется новый игрок: {name}");
             // В реальном коде тут создается объект Player и добавляется в GameState
             return _playerIdCounter++;
+        }
+
+        private XPacket CreateErrorPacket(string message, int errorCode = 500)
+        {
+            var errorMsg = new ErrorMessage { ErrorCode = errorCode, Message = message };
+
+            var packet = XPacketConverter.Serialize(XPacketType.Error, errorMsg);
+            errorMsg.SerializeString(packet);
+
+            return packet;
         }
     }
 }

@@ -1,9 +1,13 @@
-﻿using Kruta.Shared.Network.Messages.ClientMessages;
-using Kruta.Shared.Network.Messages.ServerMessages;
-using Kruta.Shared.Network.Protocol;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
+using System.IO;
+using System.Threading.Tasks;
+using System;
+using System.Linq;
 using System.Text;
-using System.Text.Json;
+using Kruta.Shared.XProtocol;
+using Kruta.Shared.XMessages;
+using Kruta.Shared.XMessages.ClientMessages;
+using Kruta.Shared.XMessages.ServerMessages;
 
 namespace Kruta.TestClient
 {
@@ -12,96 +16,384 @@ namespace Kruta.TestClient
         private TcpClient _client;
         private NetworkStream _stream;
 
-        private const string IpAddress = "127.0.0.1"; // Локальный адрес
-        private const int Port = 13000;
+        // --- ПОЛЯ ДЛЯ XPROTOCOL ---
+        private const int BufferSize = 8192;
+        private byte[] _receiveBuffer = new byte[BufferSize];
+        private MemoryStream _packetCollector = new MemoryStream(); // Накопитель входящих байтов
+        // --- КОНЕЦ ПОЛЕЙ ---
 
-        public async Task ConnectAsync()
+        private readonly string _playerName;
+        private bool _isConnected = false;
+        private bool _handshakeCompleted = false;
+
+        public ClientService(string playerName)
         {
-            _client = new TcpClient();
+            _playerName = playerName;
+        }
+
+        public async Task ConnectAndRun(string ip, int port)
+        {
             try
             {
-                await _client.ConnectAsync(IpAddress, Port);
-                _stream = _client.GetStream();
-                Console.WriteLine("[CLIENT] Успешно подключен к серверу.");
+                _client = new TcpClient();
+                Console.WriteLine($"Попытка подключения к серверу {ip}:{port}...");
 
-                // Запуск асинхронного приема данных от сервера
-                _ = ReceiveMessagesAsync();
+                await _client.ConnectAsync(ip, port);
+
+                _stream = _client.GetStream();
+                _isConnected = true;
+                Console.WriteLine($"Успешно подключено к {ip}:{port}");
+
+                // Запускаем асинхронный цикл приема пакетов
+                var receiveTask = Task.Run(ReceiveLoop);
+
+                // Цикл ввода команд (для тестирования)
+                await InputLoop();
+
+                await receiveTask;
+            }
+            catch (SocketException ex)
+            {
+                Console.WriteLine($"Ошибка подключения: {ex.Message}");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CLIENT ERROR] Не удалось подключиться: {ex.Message}");
+                Console.WriteLine($"Произошла ошибка: {ex.Message}");
+            }
+            finally
+            {
+                Disconnect();
             }
         }
 
-        // Метод для отправки любого IMessage
-        public async Task SendMessageAsync<T>(T message) where T : IMessage
+        private async Task InputLoop()
         {
-            if (_client == null || !_client.Connected)
+            Console.WriteLine("\n--- Введите команду для отправки ---");
+            Console.WriteLine("P [CardId] [TargetId] - Play Card");
+            Console.WriteLine("B [CardId] - Buy Card");
+            Console.WriteLine("E - End Turn");
+            Console.WriteLine("X - Выход\n");
+
+            while (_isConnected)
             {
-                Console.WriteLine("[CLIENT] Не подключен к серверу.");
-                return;
-            }
+                var input = await Task.Run(() => Console.ReadLine());
 
-            // 1. Упаковка сообщения в Packet
-            var packet = Packet.Create(message);
+                if (string.IsNullOrEmpty(input)) continue;
 
-            // 2. Сериализация Packet в JSON и добавление РАЗДЕЛИТЕЛЯ \n
-            string jsonString = JsonSerializer.Serialize(packet) + "\n";
-            byte[] buffer = Encoding.UTF8.GetBytes(jsonString);
+                var parts = input.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                if (parts.Length == 0) continue;
 
-            // 3. Отправка
-            await _stream.WriteAsync(buffer, 0, buffer.Length);
-            Console.WriteLine($"[CLIENT] Отправлен пакет типа: {message.Type}");
-        }
+                var command = parts[0].ToUpper();
 
-        // Асинхронный метод для приема данных от сервера
-        private async Task ReceiveMessagesAsync()
-        {
-            var buffer = new byte[4096];
-            var messageBuilder = new StringBuilder();
-
-            try
-            {
-                while (_client.Connected)
+                switch (command)
                 {
-                    int bytesRead = await _stream.ReadAsync(buffer, 0, buffer.Length);
-                    if (bytesRead == 0) break;
-
-                    messageBuilder.Append(Encoding.UTF8.GetString(buffer, 0, bytesRead));
-
-                    string fullMessage = messageBuilder.ToString();
-
-                    while (true)
-                    {
-                        int delimiterIndex = fullMessage.IndexOf('\n');
-                        if (delimiterIndex == -1)
+                    case "P": // Play Card [CardId] [TargetId]
+                        if (parts.Length >= 3 && int.TryParse(parts[1], out var cardId) && int.TryParse(parts[2], out var targetId))
                         {
-                            messageBuilder.Clear();
-                            messageBuilder.Append(fullMessage);
-                            break;
+                            SendPlayCard(cardId, targetId);
                         }
-
-                        string packetJson = fullMessage.Substring(0, delimiterIndex);
-                        fullMessage = fullMessage.Substring(delimiterIndex + 1);
-
-                        // Попытка десериализации полученного Пакета
-                        try
+                        else
                         {
-                            var packet = JsonSerializer.Deserialize<Packet>(packetJson);
-                            Console.WriteLine($"[SERVER RECV] Тип: {packet.Type} | Payload: {packet.Payload}");
-
-                            // Здесь должна быть логика обработки сообщений типа GameStateUpdate, Error и т.д.
+                            Console.WriteLine("Неверный формат. Используйте P [CardId] [TargetId]");
                         }
-                        catch (JsonException)
+                        break;
+                    case "B": // Buy Card [CardId]
+                        if (parts.Length >= 2 && int.TryParse(parts[1], out var buyCardId))
                         {
-                            Console.WriteLine("[SERVER RECV ERROR] Некорректный JSON.");
+                            SendBuyCard(buyCardId);
                         }
-                    }
+                        else
+                        {
+                            Console.WriteLine("Неверный формат. Используйте B [CardId]");
+                        }
+                        break;
+                    case "E": // End Turn
+                        SendEndTurn();
+                        break;
+                    case "X":
+                        return;
+                    default:
+                        Console.WriteLine($"Неизвестная команда: {command}");
+                        break;
                 }
             }
+        }
+
+        private async Task ReceiveLoop()
+        {
+            try
+            {
+                while (_isConnected)
+                {
+                    int bytesRead = await _stream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length);
+
+                    if (bytesRead == 0) // Сервер отключился
+                    {
+                        break;
+                    }
+                    ProcessReceivedBytes(_receiveBuffer, bytesRead);
+                }
+            }
+            catch (IOException)
+            {
+                Console.WriteLine("Соединение с сервером прервано.");
+            }
+            catch (ObjectDisposedException)
+            {
+                // Нормальное отключение
+            }
+            finally
+            {
+                Disconnect();
+            }
+        }
+
+        // === МЕХАНИЗМ СБОРА И РАЗБОРА БИНАРНЫХ ПАКЕТОВ ===
+
+        private void ProcessReceivedBytes(byte[] buffer, int bytesCount)
+        {
+            _packetCollector.Write(buffer, 0, bytesCount);
+            ExtractPackets();
+        }
+
+        private void ExtractPackets()
+        {
+            var fullData = _packetCollector.ToArray();
+            var offset = 0;
+
+            var HeaderA = new byte[] { 0xAF, 0xAA, 0xAF };
+            var HeaderB = new byte[] { 0x95, 0xAA, 0xFF };
+            var Ending = new byte[] { 0xFF, 0x00 };
+
+            while (true)
+            {
+                if (fullData.Length - offset < 7) break;
+
+                var currentData = fullData.Skip(offset).ToArray();
+
+                if (!currentData.Take(3).SequenceEqual(HeaderA) && !currentData.Take(3).SequenceEqual(HeaderB))
+                {
+                    offset++;
+                    continue;
+                }
+
+                var endingIndex = -1;
+                for (int i = 3; i < currentData.Length - 1; i++)
+                {
+                    if (currentData[i] == Ending[0] && currentData[i + 1] == Ending[1])
+                    {
+                        endingIndex = i + 1;
+                        break;
+                    }
+                }
+
+                if (endingIndex == -1) break;
+
+                var packetLength = endingIndex + 1;
+                var rawPacket = currentData.Take(packetLength).ToArray();
+
+                var xpacket = XPacket.Parse(rawPacket);
+
+                if (xpacket != null)
+                {
+                    ProcessPacket(xpacket);
+                }
+                else
+                {
+                    Console.WriteLine("Ошибка: Не удалось распарсить XPacket.");
+                }
+
+                offset += packetLength;
+            }
+
+            if (offset > 0)
+            {
+                var remainingData = fullData.Skip(offset).ToArray();
+                _packetCollector.SetLength(0);
+                _packetCollector.Write(remainingData, 0, remainingData.Length);
+            }
+        }
+
+        // === ОБРАБОТКА ВХОДЯЩИХ СООБЩЕНИЙ ===
+
+        private void ProcessPacket(XPacket packet)
+        {
+            var packetType = XPacketTypeManager.GetTypeFromPacket(packet);
+
+            switch (packetType)
+            {
+                case XPacketType.Handshake:
+                    ProcessHandshake(packet);
+                    break;
+                case XPacketType.GameStateUpdate:
+                    ProcessGameStateUpdate(packet);
+                    break;
+                case XPacketType.Error:
+                    ProcessError(packet);
+                    break;
+                case XPacketType.GameOver:
+                    ProcessGameOver(packet);
+                    break;
+                case XPacketType.PlayerConnected: // <-- НОВЫЙ CASE
+                    ProcessPlayerConnected(packet);
+                    break;
+                default:
+                    Console.WriteLine($"[Client] Получен неожиданный пакет типа {packetType}");
+                    break;
+            }
+        }
+
+        private void ProcessHandshake(XPacket packet)
+        {
+            var handshakeMsg = XPacketConverter.Deserialize<XPacketHandshake>(packet);
+
+            Console.WriteLine($"[Server] Получен Handshake с MagicNumber: {handshakeMsg.MagicHandshakeNumber}");
+
+            if (!_handshakeCompleted)
+            {
+                // Отправляем ответ: MagicNumber + 15
+                handshakeMsg.MagicHandshakeNumber += 15;
+                var responsePacket = XPacketConverter.Serialize(XPacketType.Handshake, handshakeMsg);
+                SendPacket(responsePacket);
+
+                _handshakeCompleted = true;
+
+                // СРАЗУ ПОСЛЕ HANDSHAKE ОТПРАВЛЯЕМ AUTH
+                SendAuthPacket();
+            }
+        }
+
+        private void ProcessGameStateUpdate(XPacket packet)
+        {
+            // Десериализация Value Types (GameStateUpdateMessage)
+            var stateMsg = XPacketConverter.Deserialize<GameStateUpdateMessage>(packet);
+
+            // Поскольку GameState — это struct с [XField], она десериализуется как часть пакета
+            // Если бы мы хотели получить ее отдельно:
+            // var gameState = XPacketConverter.Deserialize<GameState>(packet); 
+
+            // Для простоты вывода:
+            var gameState = stateMsg.CurrentState;
+
+            Console.WriteLine("--- ОБНОВЛЕНИЕ СОСТОЯНИЯ ИГРЫ ---");
+            Console.WriteLine($"Ход №: {gameState.TurnNumber}");
+            Console.WriteLine($"Активный игрок: {gameState.ActivePlayerId}");
+            Console.WriteLine($"Игра запущена: {gameState.IsGameRunning}");
+        }
+
+        private void ProcessError(XPacket packet)
+        {
+            var errorMsg = XPacketConverter.Deserialize<ErrorMessage>(packet);
+            errorMsg.DeserializeString(packet); // Ручная десериализация строки
+
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"[ОШИБКА {errorMsg.ErrorCode}] {errorMsg.Message}");
+            Console.ResetColor();
+        }
+
+        private void ProcessGameOver(XPacket packet)
+        {
+            var msg = XPacketConverter.Deserialize<GameOverMessage>(packet);
+            msg.DeserializeString(packet);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("=====================================");
+            Console.WriteLine($"!!! ИГРА ОКОНЧЕНА !!! Победитель: {msg.WinnerPlayerId}");
+            Console.WriteLine($"Сводка: {msg.FinalScoreSummary}");
+            Console.WriteLine("=====================================");
+            Console.ResetColor();
+        }
+
+        private void ProcessPlayerConnected(XPacket packet)
+        {
+            var msg = XPacketConverter.Deserialize<PlayerConnectedMessage>(packet);
+            msg.DeserializeString(packet); // Ручная десериализация имени
+
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine("-------------------------------------");
+            Console.WriteLine($"[GAME NOTIFY] Новый игрок подключен: {msg.PlayerName} (ID: {msg.PlayerId})");
+            Console.WriteLine("-------------------------------------");
+            Console.ResetColor();
+        }
+
+
+        // === МЕТОДЫ ОТПРАВКИ СООБЩЕНИЙ КЛИЕНТА ===
+
+        private void SendPacket(XPacket packet)
+        {
+            if (!_isConnected || _stream == null) return;
+
+            try
+            {
+                var bytes = packet.ToPacket();
+                _stream.Write(bytes, 0, bytes.Length);
+                _stream.Flush();
+            }
             catch (Exception ex)
             {
-                Console.WriteLine($"[CLIENT RECV ERROR] Поток чтения прерван: {ex.Message}");
+                Console.WriteLine($"Ошибка отправки пакета: {ex.Message}");
+                Disconnect();
+            }
+        }
+
+        private void SendAuthPacket()
+        {
+            var authMsg = new AuthMessage
+            {
+                ProtocolVersion = 1,
+                PlayerName = _playerName
+            };
+
+            var packet = XPacketConverter.Serialize(XPacketType.Auth, authMsg);
+            authMsg.SerializeString(packet); // Ручная сериализация строки
+
+            SendPacket(packet);
+            Console.WriteLine($"[Client] Отправлен пакет Auth. Имя: {_playerName}");
+        }
+
+        private void SendPlayCard(int cardId, int targetPlayerId)
+        {
+            var msg = new PlayCardMessage
+            {
+                CardId = cardId,
+                TargetPlayerId = targetPlayerId
+            };
+            var packet = XPacketConverter.Serialize(XPacketType.PlayCard, msg);
+            SendPacket(packet);
+            Console.WriteLine($"[Client] Отправлен PlayCard (Card: {cardId}, Target: {targetPlayerId})");
+        }
+
+        private void SendBuyCard(int cardIdToBuy)
+        {
+            var msg = new BuyCardMessage
+            {
+                PlayerId = 0, // Не используется, но должно быть заполнено
+                CardIdToBuy = cardIdToBuy
+            };
+            var packet = XPacketConverter.Serialize(XPacketType.BuyCard, msg);
+            SendPacket(packet);
+            Console.WriteLine($"[Client] Отправлен BuyCard (Card: {cardIdToBuy})");
+        }
+
+        private void SendEndTurn()
+        {
+            var msg = new EndTurnMessage
+            {
+                PlayerId = 0 // Не используется
+            };
+            var packet = XPacketConverter.Serialize(XPacketType.EndTurn, msg);
+            SendPacket(packet);
+            Console.WriteLine("[Client] Отправлен EndTurn");
+        }
+
+        private void Disconnect()
+        {
+            if (_isConnected)
+            {
+                _isConnected = false;
+                _stream?.Dispose();
+                _client?.Close();
+                Console.WriteLine("Клиент отключен.");
             }
         }
     }

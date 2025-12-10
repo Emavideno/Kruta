@@ -1,33 +1,32 @@
-﻿using Kruta.Shared.Network.Messages.ClientMessages;
-using Kruta.Shared.Network.Enums;
+﻿using System.Net.Sockets;
+using System.IO;
+using System.Threading.Tasks;
+using System;
+using System.Linq;
+using System.Text;
+using Kruta.Shared.XProtocol;
+using Kruta.Shared.XMessages;
+using Kruta.Shared.XMessages.ClientMessages;
+using Kruta.Shared.XMessages.ServerMessages;
 using Kruta.TestClient;
 
 Console.Title = "Kruta Test Client";
-var client = new ClientService();
-await client.ConnectAsync();
 
-if (client != null)
-{
-    // 1. Отправляем сообщение для регистрации (AuthMessage)
-    var authMsg = new AuthMessage { PlayerName = "Kolobok-Hacker" };
-    await client.SendMessageAsync(authMsg);
+// --- Константы для подключения ---
+// Убедитесь, что эти параметры соответствуют вашему серверу
+const string ServerIp = "127.0.0.1";
+const int ServerPort = 13000;
+const string PlayerName = "Kolobok-Hacker";
 
-    // 2. Имитация хода (Отправляем PlayCard)
-    // Важно: тут используется заглушка CardId=100, в реальной игре нужно ID из GameState
-    await Task.Delay(1000);
-    var playCardMsg = new PlayCardMessage { CardId = 100, TargetPlayerId = null };
-    await client.SendMessageAsync(playCardMsg);
+Console.WriteLine($"Kruta Test Client: {PlayerName}");
+Console.WriteLine($"Подключение к {ServerIp}:{ServerPort}...");
 
-    // 3. Имитация покупки карты
-    await Task.Delay(1000);
-    var buyCardMsg = new BuyCardMessage { CardId = 201, Source = BuySource.Baraholka };
-    await client.SendMessageAsync(buyCardMsg);
+// Создаем экземпляр ClientService с именем игрока
+var client = new ClientService(PlayerName);
 
-    // 4. Имитация завершения хода
-    await Task.Delay(1000);
-    await client.SendMessageAsync(new EndTurnMessage());
+// Запускаем подключение и основной цикл.
+// Этот метод не завершится, пока клиент не будет отключен или не введена команда выхода (X).
+await client.ConnectAndRun(ServerIp, ServerPort);
 
-    // Держим консоль открытой для приема сообщений от сервера
-    Console.WriteLine("Нажмите Enter для выхода...");
-    Console.ReadLine();
-}
+Console.WriteLine("Клиентская программа завершена. Нажмите Enter, чтобы закрыть консоль...");
+Console.ReadLine();

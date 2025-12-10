@@ -1,114 +1,347 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Kruta.Shared.Network.Protocol;
-using System.Net.Sockets;
-using System.Text.Json;
+﻿using System.Net.Sockets;
+using System.IO;
+using System.Threading.Tasks;
+using System;
+using System.Collections.Concurrent;
+using System.Linq;
+using Kruta.Shared.XProtocol;
+using Kruta.Shared.XMessages;
+using Kruta.Shared.XMessages.ClientMessages;
+using Kruta.Shared.XMessages.ServerMessages;
+
+
+// Предполагаем, что Kruta.Server.Logic содержит интерфейсы для взаимодействия
 using Kruta.Server.Logic;
 
 namespace Kruta.Server.Networking
 {
     public class ClientConnection
     {
-        private readonly TcpClient _client;
         private readonly NetworkStream _stream;
-        private readonly PacketHandler _handler = new PacketHandler();
+        private readonly TcpClient _client;
 
-        // Буфер для приема данных (можно регулировать размер)
-        private const int BufferSize = 4096;
-        private byte[] _buffer = new byte[BufferSize];
+        // Исправлено: Используем интерфейс/класс для взаимодействия с основной логикой сервера
+        private readonly IGameSessionManager _sessionManager;
 
-        public int PlayerId { get; internal set; } // ID игрока после успешной Auth
+        // --- ПОЛЯ ДЛЯ XPROTOCOL ---
+        private const int BufferSize = 8192;
+        private byte[] _receiveBuffer = new byte[BufferSize];
+        private MemoryStream _packetCollector = new MemoryStream();
+        // --- КОНЕЦ НОВЫХ ПОЛЕЙ ---
 
-        public ClientConnection(TcpClient client)
+        public int ClientId { get; private set; }
+        private ConcurrentQueue<XPacket> _incomingQueue = new ConcurrentQueue<XPacket>();
+
+        private bool _isAuthenticated = false;
+
+        // Конструктор теперь принимает IGameSessionManager
+        public ClientConnection(TcpClient client, int clientId, IGameSessionManager sessionManager)
         {
             _client = client;
+            ClientId = clientId;
             _stream = client.GetStream();
+            _sessionManager = sessionManager;
+
+            Console.WriteLine($"[Client {ClientId}] Подключен.");
         }
 
         public async Task ProcessAsync()
         {
             try
             {
-                // Для простоты, мы будем использовать простой разделитель \n 
-                // между JSON-объектами, чтобы разделить Пакеты в потоке.
+                // ОТПРАВКА ПАКЕТА РУКОПОЖАТИЯ (Handshake)
+                var rand = new Random();
+                int magicHandshakeNumber = rand.Next();
 
-                var messageBuilder = new StringBuilder();
+                QueuePacketSend(CreateHandshakePacket(magicHandshakeNumber));
 
-                while (_client.Connected)
+                // ОЖИДАНИЕ АУТЕНТИФИКАЦИИ ИЛИ HANDSHAKE-ОТВЕТА
+                while (_client.Connected && !_isAuthenticated)
                 {
-                    // Читаем данные из потока
-                    int bytesRead = await _stream.ReadAsync(_buffer, 0, _buffer.Length);
+                    await ReadAndProcessBytes();
+                    await Task.Delay(10);
+                }
 
-                    if (bytesRead == 0) // Клиент отключился
-                    {
-                        Console.WriteLine($"[CONNECTION] Клиент {_client.Client.RemoteEndPoint} отключился.");
-                        break;
-                    }
-
-                    // Добавляем прочитанные данные в буфер сообщений
-                    messageBuilder.Append(Encoding.UTF8.GetString(_buffer, 0, bytesRead));
-
-                    // Обрабатываем сообщения, разделенные символом \n
-                    // Это критично для TCP, так как сообщения могут приходить склеенными (Streaming)
-
-                    string fullMessage = messageBuilder.ToString();
-
-                    while (true)
-                    {
-                        int delimiterIndex = fullMessage.IndexOf('\n');
-                        if (delimiterIndex == -1)
-                        {
-                            // Нет полного сообщения, ждем следующего чтения
-                            messageBuilder.Clear();
-                            messageBuilder.Append(fullMessage);
-                            break;
-                        }
-
-                        // Получено полное сообщение
-                        string packetJson = fullMessage.Substring(0, delimiterIndex);
-                        fullMessage = fullMessage.Substring(delimiterIndex + 1); // Остаток идет на следующую итерацию
-
-                        // 1. Десериализация в Packet (Конверт)
-                        Packet packet = JsonSerializer.Deserialize<Packet>(packetJson);
-
-                        // 2. Обработка Пакета
-                        if (packet != null)
-                        {
-                            // Передаем пакет центральному обработчику
-                            await _handler.HandlePacketAsync(this, packet);
-                        }
-                    }
+                // ОСНОВНОЙ ЦИКЛ ОБРАБОТКИ
+                while (_client.Connected && _isAuthenticated)
+                {
+                    await ReadAndProcessBytes();
                 }
             }
-            catch (IOException)
+            catch (IOException ex)
             {
-                // Ошибка чтения/записи, например, при внезапном разрыве соединения
-                Console.WriteLine($"[ERROR] Соединение с клиентом {PlayerId} прервано.");
+                Console.WriteLine($"[Client {ClientId}] Отключен. Ошибка: {ex.Message}");
             }
-            catch (Exception ex)
+            catch (ObjectDisposedException)
             {
-                Console.WriteLine($"[FATAL] Необработанная ошибка обработки клиента: {ex.Message}");
+                Console.WriteLine($"[Client {ClientId}] Соединение закрыто.");
             }
             finally
             {
+                // Используем IGameSessionManager для удаления клиента
+                _sessionManager.RemoveClient(ClientId);
                 _client.Close();
-                // Тут должна быть логика очистки (удаление игрока из GameState)
             }
         }
 
-        // Метод для отправки любого сообщения клиенту
-        public async Task SendMessageAsync<T>(T message) where T : IMessage
+        private async Task ReadAndProcessBytes()
         {
-            // 1. Упаковываем сообщение в Packet
-            var packet = Packet.Create(message);
+            int bytesRead = await _stream.ReadAsync(_receiveBuffer, 0, _receiveBuffer.Length);
 
-            // 2. Сериализуем Packet в JSON и добавляем разделитель \n
-            string jsonString = JsonSerializer.Serialize(packet) + "\n";
-            byte[] buffer = Encoding.UTF8.GetBytes(jsonString);
+            if (bytesRead == 0) // Клиент отключился
+            {
+                throw new IOException("Соединение закрыто клиентом.");
+            }
 
-            // 3. Отправляем в поток
-            await _stream.WriteAsync(buffer, 0, buffer.Length);
+            // Передача прочитанных данных в механизм сбора пакетов
+            ProcessReceivedBytes(_receiveBuffer, bytesRead);
+
+            // Обработка всех собранных пакетов
+            if (!_incomingQueue.IsEmpty)
+            {
+                ProcessIncomingPackets();
+            }
+        }
+
+        // === МЕХАНИЗМ СБОРА И РАЗБОРА БИНАРНЫХ ПАКЕТОВ (ИЗ СТАТЬИ) ===
+
+        private void ProcessReceivedBytes(byte[] buffer, int bytesCount)
+        {
+            _packetCollector.Write(buffer, 0, bytesCount);
+            ExtractPackets();
+        }
+
+        private void ExtractPackets()
+        {
+            var fullData = _packetCollector.ToArray();
+            var offset = 0;
+
+            var HeaderA = new byte[] { 0xAF, 0xAA, 0xAF };
+            var HeaderB = new byte[] { 0x95, 0xAA, 0xFF };
+            var Ending = new byte[] { 0xFF, 0x00 };
+
+            while (true)
+            {
+                if (fullData.Length - offset < 7)
+                {
+                    break;
+                }
+
+                var currentData = fullData.Skip(offset).ToArray();
+
+                if (!currentData.Take(3).SequenceEqual(HeaderA) && !currentData.Take(3).SequenceEqual(HeaderB))
+                {
+                    // Предполагаем, что это мусор или ошибка, сдвигаемся на 1 байт и ищем заново
+                    offset++;
+                    continue;
+                }
+
+                var endingIndex = -1;
+                for (int i = 3; i < currentData.Length - 1; i++)
+                {
+                    if (currentData[i] == Ending[0] && currentData[i + 1] == Ending[1])
+                    {
+                        endingIndex = i + 1;
+                        break;
+                    }
+                }
+
+                if (endingIndex == -1)
+                {
+                    break;
+                }
+
+                var packetLength = endingIndex + 1;
+                var rawPacket = currentData.Take(packetLength).ToArray();
+
+                var xpacket = XPacket.Parse(rawPacket);
+                if (xpacket != null)
+                {
+                    _incomingQueue.Enqueue(xpacket);
+                }
+                else
+                {
+                    Console.WriteLine($"[Client {ClientId}] Ошибка парсинга XPacket. Длина: {rawPacket.Length}");
+                }
+
+                offset += packetLength;
+            }
+
+            if (offset > 0)
+            {
+                var remainingData = fullData.Skip(offset).ToArray();
+                _packetCollector.SetLength(0);
+                _packetCollector.Write(remainingData, 0, remainingData.Length);
+            }
+        }
+
+        // === ОТПРАВКА ПАКЕТОВ ===
+
+        public void QueuePacketSend(XPacket packet)
+        {
+            try
+            {
+                var bytes = packet.ToPacket();
+                _stream.Write(bytes, 0, bytes.Length);
+                // Отправка в потоке синхронна, но для UDP или более сложных систем здесь была бы очередь.
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine($"[Client {ClientId}] Ошибка отправки: {ex.Message}");
+            }
+            catch (ObjectDisposedException)
+            {
+                // Клиент отключился
+            }
+        }
+
+        // Вспомогательный метод для создания пакета Handshake
+        private XPacket CreateHandshakePacket(int magicNumber)
+        {
+            var handshakeMsg = new XPacketHandshake { MagicHandshakeNumber = magicNumber };
+            return XPacketConverter.Serialize(XPacketType.Handshake, handshakeMsg);
+        }
+
+        // Вспомогательный метод для создания пакета Error
+        private XPacket CreateErrorPacket(string message, int errorCode = 500)
+        {
+            var errorMsg = new ErrorMessage { ErrorCode = errorCode, Message = message };
+
+            var packet = XPacketConverter.Serialize(XPacketType.Error, errorMsg);
+            errorMsg.SerializeString(packet); // Ручная сериализация строки
+
+            return packet;
+        }
+
+        // === ОБРАБОТКА ВХОДЯЩИХ ПАКЕТОВ ===
+
+        private void ProcessIncomingPackets()
+        {
+            while (_incomingQueue.TryDequeue(out var packet))
+            {
+                var packetType = XPacketTypeManager.GetTypeFromPacket(packet);
+
+                switch (packetType)
+                {
+                    case XPacketType.Handshake:
+                        ProcessHandshake(packet);
+                        break;
+                    case XPacketType.Auth:
+                        ProcessAuth(packet);
+                        break;
+                    case XPacketType.PlayCard:
+                        ProcessPlayCard(packet);
+                        break;
+                    case XPacketType.BuyCard:
+                        ProcessBuyCard(packet);
+                        break;
+                    case XPacketType.EndTurn:
+                        ProcessEndTurn(packet);
+                        break;
+                    case XPacketType.Unknown:
+                        Console.WriteLine($"[Client {ClientId}] Получен неизвестный пакет.");
+                        QueuePacketSend(CreateErrorPacket("Неизвестный тип пакета."));
+                        break;
+                    default:
+                        Console.WriteLine($"[Client {ClientId}] Получен неожиданный пакет типа {packetType}");
+                        break;
+                }
+            }
+        }
+
+        // === РЕАЛИЗАЦИЯ МЕТОДОВ ОБРАБОТКИ (Заглушки) ===
+
+        private void ProcessHandshake(XPacket packet)
+        {
+            Console.WriteLine($"[Client {ClientId}] Получен ответ Handshake.");
+
+            var handshakeMsg = XPacketConverter.Deserialize<XPacketHandshake>(packet);
+
+            // Логика из статьи: отвечаем числом на 15 меньше
+            handshakeMsg.MagicHandshakeNumber -= 15;
+
+            // Отправляем обратно, потенциально зашифрованным
+            var responsePacket = XPacketConverter.Serialize(XPacketType.Handshake, handshakeMsg);
+
+            // Здесь можно решить, шифровать ли ответ
+            // QueuePacketSend(responsePacket.Encrypt()); 
+
+            QueuePacketSend(responsePacket);
+
+            // Если рукопожатие успешно, можно разрешить аутентификацию
+            // (В этой версии, аутентификация разрешена по умолчанию после Handshake)
+        }
+
+        private void ProcessAuth(XPacket packet)
+        {
+            if (_isAuthenticated)
+            {
+                QueuePacketSend(CreateErrorPacket("Вы уже аутентифицированы."));
+                return;
+            }
+
+            // 1. Десериализация Value Types
+            var authMsg = XPacketConverter.Deserialize<AuthMessage>(packet);
+
+            // 2. Десериализация строки (ручная)
+            authMsg.DeserializeString(packet);
+
+            if (authMsg.ProtocolVersion != 1)
+            {
+                QueuePacketSend(CreateErrorPacket($"Несовместимая версия протокола: {authMsg.ProtocolVersion}.", 400));
+                return;
+            }
+
+            // <--- ИЗМЕНЕНИЕ ЗДЕСЬ: ПЕРЕДАЕМ УПРАВЛЕНИЕ МЕНЕДЖЕРУ --->
+
+            // Регистрируем нового игрока, что вызовет рассылку PlayerConnected всем
+            _sessionManager.RegisterNewPlayer(ClientId, authMsg.PlayerName);
+
+            _isAuthenticated = true;
+            Console.WriteLine($"[Client {ClientId}] Аутентифицирован как: {authMsg.PlayerName}");
+        }
+
+        private void ProcessPlayCard(XPacket packet)
+        {
+            var msg = XPacketConverter.Deserialize<PlayCardMessage>(packet);
+
+            Console.WriteLine($"[Client {ClientId}] Разыгрывает карту ID: {msg.CardId} на игрока {msg.TargetPlayerId}. (ЗАГЛУШКА)");
+
+            // Логика: Проверить ход, проверить карту, обновить состояние игры, разослать GameStateUpdate всем.
+        }
+
+        private void ProcessBuyCard(XPacket packet)
+        {
+            var msg = XPacketConverter.Deserialize<BuyCardMessage>(packet);
+
+            Console.WriteLine($"[Client {ClientId}] Покупает карту (ID {msg.CardIdToBuy}). (ЗАГЛУШКА)");
+
+            // Логика: Выдать карту, обновить GameState.
+        }
+
+        private void ProcessEndTurn(XPacket packet)
+        {
+            var msg = XPacketConverter.Deserialize<EndTurnMessage>(packet);
+
+            Console.WriteLine($"[Client {ClientId}] Завершает ход. (ЗАГЛУШКА)");
+
+            // Логика: Сменить активного игрока, проверить условия победы, отправить GameStateUpdate.
+        }
+
+        /// <summary>
+        /// Безопасно закрывает сетевое соединение с клиентом.
+        /// </summary>
+        public void Close()
+        {
+            // Устанавливаем флаг, чтобы остановить циклы ProcessAsync и ReceiveLoop
+            // Хотя в текущем коде ProcessAsync управляется флагом _client.Connected, 
+            // это полезно для явной индикации.
+            // if (_client.Connected) // Можно добавить для проверки
+            // {
+            _stream?.Dispose();
+            _client?.Close();
+            // }
+            Console.WriteLine($"[Client {ClientId}] Принудительное закрытие соединения.");
         }
     }
 }
