@@ -27,6 +27,10 @@ namespace Kruta.Server.Networking
         private ConcurrentDictionary<int, ClientConnection> _connections =
             new ConcurrentDictionary<int, ClientConnection>();
 
+        // 3. Коллекция для хранения активных ИГРОКОВ (Player)
+        private ConcurrentDictionary<int, Player> _activePlayers =
+            new ConcurrentDictionary<int, Player>();
+
         public GameServer()
         {
             _listener = new TcpListener(IPAddress.Any, _port);
@@ -88,7 +92,12 @@ namespace Kruta.Server.Networking
             {
                 connection.Close();
             }
+
             _connections.Clear();
+            _activePlayers.Clear();
+
+            // (Опционально) Сброс счетчика ID
+            _nextClientId = 1;
 
             Console.WriteLine("[SERVER] Все соединения закрыты. Сервер остановлен.");
         }
@@ -98,12 +107,28 @@ namespace Kruta.Server.Networking
         // ==========================================================
 
         // 1. Метод для удаления клиента (вызывается ClientConnection при отключении)
+        // Kruta.Server/Networking/GameServer.cs
+
         public void RemoveClient(int clientId)
         {
+            // 1. Удаление соединения
             if (_connections.TryRemove(clientId, out var connection))
             {
-                Console.WriteLine($"[MANAGER] Клиент {clientId} удален из активных соединений.");
-                // Дополнительная логика: уведомление других игроков об отключении
+                Console.WriteLine($"[MANAGER] Соединение клиента {clientId} удалено.");
+            }
+
+            // 2. УДАЛЕНИЕ ОБЪЕКТА PLAYER
+            if (_activePlayers.TryRemove(clientId, out var player))
+            {
+                Console.WriteLine($"[MANAGER] Игрок {player.Name} (ID: {player.Id}) удален из активных игроков.");
+
+                // !!! ДОБАВЛЕНО: УВЕДОМЛЕНИЕ ОСТАЛЬНЫХ ИГРОКОВ !!!
+                var disconnectMsg = new PlayerDisconnectedMessage
+                {
+                    PlayerId = player.Id // Указываем ID игрока, который отключился
+                };
+                var xpacket = XPacketConverter.Serialize(XPacketType.PlayerDisconnected, disconnectMsg);
+                BroadcastPacket(xpacket);
             }
         }
 
@@ -120,23 +145,40 @@ namespace Kruta.Server.Networking
         // 3. Метод для регистрации нового игрока и рассылки уведомлений (вызывается из ProcessAuth)
         public void RegisterNewPlayer(int clientId, string playerName)
         {
-            Console.WriteLine($"[MANAGER] Игрок {playerName} (ID: {clientId}) зарегистрирован.");
+            // 1. Генерируем ID игрока (можно использовать ClientId, если игра 1:1)
+            // Сейчас используем ClientId, чтобы упростить связь
+            int playerId = clientId;
 
-            // 1. Создание пакета PlayerConnected
+            // 2. СОЗДАНИЕ И СОХРАНЕНИЕ ОБЪЕКТА PLAYER
+            var newPlayer = new Player(
+                id: playerId,
+                name: playerName,
+                clientId: clientId // Связываем Player с его сетевым ClientId
+            );
+
+            // Добавляем игрока в коллекцию
+            if (!_activePlayers.TryAdd(playerId, newPlayer))
+            {
+                // В случае ошибки (например, если ID уже существует)
+                Console.WriteLine($"[ERROR] Игрок с ID {playerId} уже существует.");
+                return;
+            }
+
+            Console.WriteLine($"[MANAGER] {newPlayer.ToString()} зарегистрирован и добавлен.");
+
+            // 3. Создание пакета PlayerConnected (рассылка)
             var msg = new PlayerConnectedMessage
             {
-                PlayerId = clientId,
-                SlotIndex = clientId, // Пока используем ID в качестве слота
-                PlayerName = playerName
+                PlayerId = newPlayer.Id,
+                SlotIndex = newPlayer.Id,
+                PlayerName = newPlayer.Name
             };
 
             var xpacket = XPacketConverter.Serialize(XPacketType.PlayerConnected, msg);
-            msg.SerializeString(xpacket); // Добавление имени
+            msg.SerializeString(xpacket);
 
-            // 2. Рассылка пакета всем клиентам
+            // 4. Рассылка пакета всем клиентам
             BroadcastPacket(xpacket);
-
-            // TODO: Здесь должна быть логика отправки списка существующих игроков новому клиенту
         }
     }
 }

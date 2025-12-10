@@ -23,5 +23,6 @@ namespace Kruta.Shared.XProtocol
         GameOver = 31,        // Type 3, Subtype 1
         Error = 32,           // Type 3, Subtype 2
         PlayerConnected = 33, // Type 3, Subtype 3
+        PlayerDisconnected = 34 // Type 3, Subtype 4
     }
 }

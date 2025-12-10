@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using System;
 using System.Linq;
 using System.Text;
+using System.Collections.Concurrent;
 using Kruta.Shared.XProtocol;
 using Kruta.Shared.XMessages;
 using Kruta.Shared.XMessages.ClientMessages;
@@ -21,6 +22,10 @@ namespace Kruta.TestClient
         private byte[] _receiveBuffer = new byte[BufferSize];
         private MemoryStream _packetCollector = new MemoryStream(); // Накопитель входящих байтов
         // --- КОНЕЦ ПОЛЕЙ ---
+
+        // Используем ConcurrentDictionary, чтобы безопасно хранить ID игрока и его Имя
+        private ConcurrentDictionary<int, string> _localPlayers =
+            new ConcurrentDictionary<int, string>();
 
         private readonly string _playerName;
         private bool _isConnected = false;
@@ -237,6 +242,9 @@ namespace Kruta.TestClient
                 case XPacketType.PlayerConnected: // <-- НОВЫЙ CASE
                     ProcessPlayerConnected(packet);
                     break;
+                case XPacketType.PlayerDisconnected:
+                    ProcessPlayerDisconnected(packet);
+                    break;
                 default:
                     Console.WriteLine($"[Client] Получен неожиданный пакет типа {packetType}");
                     break;
@@ -309,11 +317,36 @@ namespace Kruta.TestClient
             var msg = XPacketConverter.Deserialize<PlayerConnectedMessage>(packet);
             msg.DeserializeString(packet); // Ручная десериализация имени
 
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine("-------------------------------------");
-            Console.WriteLine($"[GAME NOTIFY] Новый игрок подключен: {msg.PlayerName} (ID: {msg.PlayerId})");
-            Console.WriteLine("-------------------------------------");
-            Console.ResetColor();
+            // Добавление игрока в локальный список
+            if (_localPlayers.TryAdd(msg.PlayerId, msg.PlayerName))
+            {
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine("-------------------------------------");
+                Console.WriteLine($"[GAME NOTIFY] Новый игрок подключен: {msg.PlayerName} (ID: {msg.PlayerId})");
+                Console.WriteLine("-------------------------------------");
+                Console.ResetColor();
+            }
+            else
+            {
+                // Это должно случиться только один раз при подключении к игре, иначе это ошибка.
+                Console.WriteLine($"[Client] Игрок {msg.PlayerName} (ID: {msg.PlayerId}) уже присутствует в локальном списке.");
+            }
+        }
+
+        private void ProcessPlayerDisconnected(XPacket packet)
+        {
+            // 1. Десериализация сообщения
+            var msg = XPacketConverter.Deserialize<PlayerDisconnectedMessage>(packet);
+
+            // 2. УДАЛЕНИЕ ИГРОКА ИЗ ЛОКАЛЬНОГО СПИСКА
+            if (_localPlayers.TryRemove(msg.PlayerId, out var playerName))
+            {
+                Console.WriteLine($"[CLIENT] Игрок {playerName} (ID: {msg.PlayerId}) отключился от сервера и удален.");
+            }
+            else
+            {
+                Console.WriteLine($"[CLIENT] Ошибка: Попытка удалить неизвестного игрока с ID {msg.PlayerId}.");
+            }
         }
 
 

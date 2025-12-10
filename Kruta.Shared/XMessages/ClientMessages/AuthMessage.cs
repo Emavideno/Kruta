@@ -11,6 +11,10 @@ namespace Kruta.Shared.XMessages.ClientMessages
         [XField(1)]
         public int ProtocolVersion = 1;
 
+        // ID игрока для логина/идентификации !!!
+        [XField(2)]
+        public int PlayerId;
+
         // --- Поле, которое нужно обрабатывать вручную (String) ---
         public string PlayerName;
 
