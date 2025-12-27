@@ -38,10 +38,13 @@ namespace Kruta.GUI2
             builder.Services.AddTransient<GamePage>();
 
             // ViewModel для игры
-            builder.Services.AddTransient<PlayViewModel>();
+            builder.Services.AddSingleton<PlayViewModel>();
 
             // Страница игры
             builder.Services.AddTransient<PlayPage>();
+
+            builder.Services.AddSingleton<AppShell>();
+            builder.Services.AddSingleton<App>();
 
             return builder.Build();
         }

@@ -1,6 +1,8 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using Kruta.GUI2.Services;
 using Kruta.Protocol;
+using Kruta.Shared.Mini;
+using Kruta.Shared.Mini.Cards;
 using System.Collections.ObjectModel;
 using System.Text;
 
@@ -16,12 +18,32 @@ namespace Kruta.GUI2.ViewModels
         // Временный список всех имен, полученных от сервера
         private List<string> _allPlayerNames = new();
 
+        // Коллекция для центра стола (Барахолка)
+        public ObservableCollection<ICardMini> BaraholkaCards { get; } = new();
+
+        // Коллекция для нижней панели (Ваши карты)
+        public ObservableCollection<ICardMini> MyHandCards { get; } = new();
+
+        // Свойство для хранения вашего ID (полученного от сервера)
+        private int _myPlayerIdInServer;
+
         public ObservableCollection<OpponentDisplay> Opponents { get; } = new()
         {
             new OpponentDisplay { Position = "Top" },
             new OpponentDisplay { Position = "Left" },
             new OpponentDisplay { Position = "Right" }
         };
+
+        private int _deckRemainingCount;
+        public int DeckRemainingCount
+        {
+            get => _deckRemainingCount;
+            set
+            {
+                _deckRemainingCount = value;
+                OnPropertyChanged(); // Обязательно для обновления UI
+            }
+        }
 
         public PlayViewModel(NetworkService networkService)
         {
@@ -34,10 +56,15 @@ namespace Kruta.GUI2.ViewModels
 
             // Запрашиваем актуальный список игроков при входе
             _networkService.SendPacket(EAPacket.Create(2, 0));
+
+            // Тестовые карты в Барахолке (удалить позже)
+            BaraholkaCards.Add(new SomeCardMini { Name = "Тест Карта", Cost = 5, CardId = 1 });
         }
 
         private void HandlePacket(EAPacket p)
         {
+            System.Diagnostics.Debug.WriteLine($"[DEBUG] Получен пакет: Type={p.PacketType}, Subtype={p.PacketSubtype}");
+
             // Тип 5: Управление ходом
             if (p.PacketType == 5)
             {
@@ -59,6 +86,52 @@ namespace Kruta.GUI2.ViewModels
 
                 // Пересчитываем положение игроков на столе
                 RebuildTable();
+            }
+
+            // Тип 4, Подтип 1: Данные инициализации игры (Mini модели)
+            if (p.PacketType == 4 && p.PacketSubtype == 1)
+            {
+                // 1. Мой ID (читаем только если есть)
+                if (p.HasField(5))
+                {
+                    var idRaw = p.GetValueRaw(5);
+                    _myPlayerIdInServer = BitConverter.ToInt32(idRaw, 0);
+                }
+
+                // 2. Барахолка
+                if (p.HasField(6))
+                {
+                    var baraholkaRaw = p.GetValueRaw(6);
+                    BaraholkaCards.Clear();
+                    for (int i = 0; i < baraholkaRaw.Length; i += 4)
+                    {
+                        int id = BitConverter.ToInt32(baraholkaRaw, i);
+                        BaraholkaCards.Add(CreateCardById(id));
+                    }
+                }
+
+                // 3. Стартовые карты
+                if (p.HasField(7))
+                {
+                    var handRaw = p.GetValueRaw(7);
+                    MyHandCards.Clear();
+                    for (int i = 0; i < handRaw.Length; i += 4)
+                    {
+                        int id = BitConverter.ToInt32(handRaw, i);
+                        MyHandCards.Add(CreateCardById(id));
+                    }
+                }
+
+                // 4. Количество карт (то самое поле 8)
+                if (p.HasField(8))
+                {
+                    var deckRaw = p.GetValueRaw(8);
+                    int newCount = BitConverter.ToInt32(deckRaw, 0);
+                    System.Diagnostics.Debug.WriteLine($"[NETWORK] Обновлено кол-во карт: {newCount}");
+                    DeckRemainingCount = newCount;
+                }
+
+                GameStatus = "Игра началась! Удачи.";
             }
         }
 
@@ -106,6 +179,25 @@ namespace Kruta.GUI2.ViewModels
                 Opponents[2].Name = opponentsToShow[2];
                 Opponents[2].IsConnected = true;
             }
+        }
+
+        // Вспомогательный метод для создания объекта карты по ID
+        private ICardMini CreateCardById(int id)
+        {
+            return id switch
+            {
+                1 => new LimpWandCard(),
+                2 => new BattleSaxCard(),
+                3 => new FizzleCard(),
+                4 => new SnotKnightCard(),
+                5 => new TwinsCard(),
+                6 => new WandCard(),
+                7 => new SignCard(),
+                8 => new WildMagicCard(),
+                9 => new InfernoCard(),
+                10 => new KrutagidonCard(),
+                _ => new SomeCardMini { CardId = id, Cost = 0 } // Заглушка для неизвестных ID
+            };
         }
     }
 

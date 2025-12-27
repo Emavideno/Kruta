@@ -13,6 +13,7 @@ namespace Kruta.Protocol
         PlayerListUpdate,   // 2:1
         ToggleReady,        // 3:0 (Клиент -> Сервер)
         PlayerReadyStatus,  // 3:1 (Сервер -> Клиент: статус конкретного игрока)
-        GameStarted         // 4:0 (Сервер -> Клиент: команда на переход к игре)
+        GameStarted,        // 4:0 (Сервер -> Клиент: команда на переход к игре)
+        GameStateUpdate     // 4:1 (Сервер -> Клиент: обновление состояния игры)
     }
 }

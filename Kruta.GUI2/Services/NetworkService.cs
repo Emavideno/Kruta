@@ -38,45 +38,61 @@ namespace Kruta.GUI2.Services
         private async Task ReceiveLoop(CancellationToken token)
         {
             var buffer = new List<byte>();
-            Debug.WriteLine("[NET] Цикл чтения запущен, жду байты...");
+            Debug.WriteLine("[NET] Цикл чтения запущен...");
+
             try
             {
                 while (!token.IsCancellationRequested && _client.Connected)
                 {
-                    int b = _stream.ReadByte(); //мы читаем по одному байту
-                    if (b == -1)
+                    // Читаем доступные байты
+                    byte[] temp = new byte[1024];
+                    int received = await _stream.ReadAsync(temp, 0, temp.Length, token);
+
+                    if (received == 0) break; // Сервер закрыл соединение
+
+                    for (int i = 0; i < received; i++)
+                        buffer.Add(temp[i]);
+
+                    // Пытаемся вытащить из буфера столько пакетов, сколько там есть
+                    bool foundPacket;
+                    do
                     {
-                        Debug.WriteLine("[NET] Сервер разорвал соединение.");
-                        break;
-                    }
+                        foundPacket = false;
+                        if (buffer.Count < 6) break;
 
-                    buffer.Add((byte)b); //закидываем этот 1 байт в буффер
-
-                    
-                    //если увидели что в буффере >6 (min размер пакета нашего с протоколом)
-                    //и концовка AE, то значит тут уже лежит целый пакет и можно начинать парсить
-                    if (buffer.Count >= 6 && buffer[^2] == 0x41 && buffer[^1] == 0x45) 
-                    {
-                        Debug.WriteLine($"[NET] Пойман полный пакет! Длина: {buffer.Count}. Парсим...");
-                        var raw = buffer.ToArray(); //из листа делаем массив байтов, потому что в методе Parse принимается именно массив
-                        var packet = EAPacket.Parse(raw);
-
-                        if (packet != null)
+                        // Ищем маркер начала (EA = 0x45, 0x41 или CS = 0x43, 0x53)
+                        // Ищем маркер конца (AE = 0x41, 0x45)
+                        int endIdx = -1;
+                        for (int i = 0; i < buffer.Count - 1; i++)
                         {
-                            Debug.WriteLine($"[NET] Пакет успешно распаршен! Тип: {packet.PacketType}, Подтип: {packet.PacketSubtype}");
-                            MainThread.BeginInvokeOnMainThread(() => {
-                                OnPacketReceived?.Invoke(packet);
-                            });
+                            if (buffer[i] == 0x41 && buffer[i + 1] == 0x45)
+                            {
+                                endIdx = i + 1;
+                                break;
+                            }
                         }
-                        else
+
+                        if (endIdx != -1)
                         {
-                            Debug.WriteLine("[NET] ПРОВАЛ: Parse вернул null. Проверь заголовки (EA/CS)!");
+                            // Вырезаем пакет
+                            var packetData = buffer.Take(endIdx + 1).ToArray();
+                            var packet = EAPacket.Parse(packetData);
+
+                            if (packet != null)
+                            {
+                                MainThread.BeginInvokeOnMainThread(() => {
+                                    OnPacketReceived?.Invoke(packet);
+                                });
+                            }
+
+                            // УДАЛЯЕМ только обработанные байты, остальное оставляем!
+                            buffer.RemoveRange(0, endIdx + 1);
+                            foundPacket = true; // Проверим, вдруг там есть еще один пакет
                         }
-                        buffer.Clear();
-                    }
+                    } while (foundPacket);
                 }
             }
-            catch (Exception ex) { Debug.WriteLine($"[NET] Ошибка в цикле: {ex.Message}"); }
+            catch (Exception ex) { Debug.WriteLine($"[NET] Ошибка: {ex.Message}"); }
         }
 
         public void SendPacket(EAPacket packet)

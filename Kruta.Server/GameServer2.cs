@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
+using Kruta.Shared.Mini;
 
 namespace Kruta.Server
 {
@@ -20,6 +21,9 @@ namespace Kruta.Server
 
         private bool _isRunning;
         private ServerSettings _settings;
+        public bool IsGameStarted { get; set; } = false;
+        public List<int> MainDeck { get; set; } = new List<int>();
+        public int[] Baraholka { get; set; } = new int[5];
 
         // Словарь: Тип пакета -> Обработчик
         private readonly Dictionary<EAPacketType, IPacketHandler> _handlers;
@@ -38,6 +42,7 @@ namespace Kruta.Server
             EAPacketTypeManager.RegisterType(EAPacketType.ToggleReady, 3, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerReadyStatus, 3, 1);
             EAPacketTypeManager.RegisterType(EAPacketType.GameStarted, 4, 0);
+            EAPacketTypeManager.RegisterType(EAPacketType.GameStateUpdate, 4, 1);
 
             _handlers = new Dictionary<EAPacketType, IPacketHandler>
     {
@@ -109,6 +114,7 @@ namespace Kruta.Server
             }
 
         }
+
 
         //Приемка сообщения от клиента
         public void OnMessageReceived(ClientObject client, EAPacket packet)

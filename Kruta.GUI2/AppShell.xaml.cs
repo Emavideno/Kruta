@@ -1,15 +1,15 @@
-﻿namespace Kruta.GUI2
+﻿using Kruta.GUI2.ViewModels;
+
+namespace Kruta.GUI2
 {
     public partial class AppShell : Shell
     {
-        public AppShell()
+        // Внедряем PlayViewModel. MAUI создаст её автоматически при запуске Shell.
+        public AppShell(PlayViewModel forceInit)
         {
             InitializeComponent();
 
-            // Регистрируем маршрут для страницы игры
             Routing.RegisterRoute("GamePage", typeof(Views.GamePage));
-
-            // Регистрируем маршрут для самой игры
             Routing.RegisterRoute("PlayPage", typeof(Views.PlayPage));
         }
     }

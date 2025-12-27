@@ -236,12 +236,12 @@ namespace Kruta.Protocol
         public byte[] GetValueRaw(byte id)
         {
             var field = GetField(id);
-
             if (field == null)
             {
-                throw new Exception();
+                // Это покажет в консоли отладки, какой именно ID и какой тип пакета виноват
+                System.Diagnostics.Debug.WriteLine($"[ERROR] Missing Field ID: {id} in Packet {PacketType}:{PacketSubtype}");
+                throw new Exception($"Field {id} not found in {PacketType}:{PacketSubtype}");
             }
-
             return field.Contents;
         }
 

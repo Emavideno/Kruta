@@ -27,15 +27,76 @@
             <Setter Property="HasShadow" Value="True" />
             <Setter Property="BorderColor" Value="Gray" />
         </Style>
+
+        <DataTemplate x:Key="CardTemplate">
+            <Frame Style="{StaticResource MyCardStyle}" BorderColor="Gold" BackgroundColor="#F0F0F0">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <Label Text="{Binding Cost, StringFormat='Cost: {0}'}" 
+                   TextColor="DarkGoldenrod" FontAttributes="Bold" FontSize="10" Margin="2,0"/>
+
+                    <VerticalStackLayout Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center">
+                        <Label Text="{Binding Name}" TextColor="Black" 
+                       HorizontalTextAlignment="Center" FontSize="11" FontAttributes="Bold" />
+                        <Label Text="{Binding CardId, StringFormat='ID: {0}'}" 
+                       TextColor="Gray" FontSize="9" HorizontalOptions="Center" />
+                    </VerticalStackLayout>
+
+                    <Label Grid.Row="2" Text="{Binding Initiative}" TextColor="Blue" 
+                   HorizontalOptions="End" FontSize="10" Margin="2"/>
+                </Grid>
+            </Frame>
+        </DataTemplate>
     </ContentPage.Resources>
 
     <Grid RowDefinitions="160, *, 180" 
           ColumnDefinitions="140, *, 140" 
           Padding="15">
 
-        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center">
+        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
             <Label Text="KRUTA" FontSize="48" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
-            <Label Text="{Binding GameStatus}" FontSize="18" TextColor="Gold" HorizontalOptions="Center" />
+
+            <Label Text="БАРАХОЛКА" HorizontalOptions="Center" TextColor="Yellow" FontAttributes="Bold" />
+
+            <Grid ColumnDefinitions="100, *" HorizontalOptions="Center" WidthRequest="620">
+
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="5" HorizontalOptions="Center">
+                    <Frame BackgroundColor="#2C3E50" 
+               BorderColor="Goldenrod"
+               CornerRadius="5"
+               WidthRequest="70" 
+               HeightRequest="100"
+               Padding="0"
+               HasShadow="True">
+                        <Label Text="DECK" 
+                   TextColor="White" 
+                   HorizontalOptions="Center" 
+                   VerticalOptions="Center" 
+                   FontAttributes="Bold"
+                   Rotation="-45"/>
+                    </Frame>
+                    <Label Text="{Binding DeckRemainingCount, StringFormat='Карт: {0}'}" 
+               TextColor="Yellow" 
+               HorizontalOptions="Center"
+               FontAttributes="Bold"
+               FontSize="13"/>
+                </VerticalStackLayout>
+
+                <CollectionView Grid.Column="1"
+                    ItemsSource="{Binding BaraholkaCards}" 
+                    ItemTemplate="{StaticResource CardTemplate}"
+                    HeightRequest="150" 
+                    WidthRequest="500"
+                    BackgroundColor="#0DFFFFFF">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                    <CollectionView.EmptyView>
+                        <Label Text="Барахолка пуста..." HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray"/>
+                    </CollectionView.EmptyView>
+                </CollectionView>
+            </Grid>
+
+            <Label Text="{Binding GameStatus}" FontSize="16" TextColor="AntiqueWhite" HorizontalOptions="Center" />
         </VerticalStackLayout>
 
         <VerticalStackLayout Grid.Row="0" Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Start" Spacing="5"
@@ -195,15 +256,18 @@
         </VerticalStackLayout>
 
         <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="10">
-            <Label Text="ВАШИ КАРТЫ" TextColor="White" HorizontalOptions="Center" FontAttributes="Bold" />
-            <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
-                <Frame Style="{StaticResource MyCardStyle}" />
-                <Frame Style="{StaticResource MyCardStyle}" />
-                <Frame Style="{StaticResource MyCardStyle}" />
-                <Frame Style="{StaticResource MyCardStyle}" />
-                <Frame Style="{StaticResource MyCardStyle}" />
-            </HorizontalStackLayout>
+            <Label Text="ВАШИ КАРТЫ" HorizontalOptions="Center" TextColor="White" />
+            <CollectionView ItemsSource="{Binding MyHandCards}" 
+                ItemTemplate="{StaticResource CardTemplate}"
+                HeightRequest="160"
+                BackgroundColor="#0DFFFFFF">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="5" />
+                </CollectionView.ItemsLayout>
+            </CollectionView>
         </VerticalStackLayout>
+        
+        
 
     </Grid>
 </ContentPage>
