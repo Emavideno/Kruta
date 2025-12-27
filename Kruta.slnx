@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Kruta.GUI2/Kruta.GUI2.csproj" />
+  <Project Path="Kruta.Protocol/Kruta.Protocol.csproj" />
+  <Project Path="Kruta.Server/Kruta.Server.csproj" />
+  <Project Path="Kruta.Shared/Kruta.Shared.csproj" />
+</Solution>

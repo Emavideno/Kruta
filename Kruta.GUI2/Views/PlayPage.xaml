@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Kruta.GUI2.ViewModels"
+             x:Class="Kruta.GUI2.Views.PlayPage"
+             BackgroundColor="#1B3F2F"
+             Title="Игровое поле">
+
+    <ContentPage.Resources>
+        <Style x:Key="OpponentCardBase" TargetType="Rectangle">
+            <Setter Property="WidthRequest" Value="55" />
+            <Setter Property="HeightRequest" Value="85" />
+            <Setter Property="RadiusX" Value="5" />
+            <Setter Property="RadiusY" Value="5" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="Fill" Value="#8B0000" />
+            <Setter Property="Stroke" Value="#550000" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+
+        <Style x:Key="MyCardStyle" TargetType="Frame">
+            <Setter Property="WidthRequest" Value="75" />
+            <Setter Property="HeightRequest" Value="115" />
+            <Setter Property="BackgroundColor" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HasShadow" Value="True" />
+            <Setter Property="BorderColor" Value="Gray" />
+        </Style>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="160, *, 180" 
+          ColumnDefinitions="140, *, 140" 
+          Padding="15">
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center">
+            <Label Text="KRUTA" FontSize="48" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
+            <Label Text="{Binding GameStatus}" FontSize="18" TextColor="Gold" HorizontalOptions="Center" />
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="0" Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Start" Spacing="5"
+                             BindingContext="{Binding Opponents[0]}">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12" />
+            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="0" HorizontalOptions="Start" VerticalOptions="Center" Spacing="5" 
+                             Rotation="90" BindingContext="{Binding Opponents[1]}">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12"/>
+            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="2" HorizontalOptions="End" VerticalOptions="Center" Spacing="5" 
+                             Rotation="-90" BindingContext="{Binding Opponents[2]}">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12" />
+            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+                <Rectangle Style="{StaticResource OpponentCardBase}">
+                    <Rectangle.Triggers>
+                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
+                            <Setter Property="Fill" Value="White"/>
+                            <Setter Property="Stroke" Value="LightGray"/>
+                            <Setter Property="Opacity" Value="1"/>
+                        </DataTrigger>
+                    </Rectangle.Triggers>
+                </Rectangle>
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="10">
+            <Label Text="ВАШИ КАРТЫ" TextColor="White" HorizontalOptions="Center" FontAttributes="Bold" />
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="5">
+                <Frame Style="{StaticResource MyCardStyle}" />
+                <Frame Style="{StaticResource MyCardStyle}" />
+                <Frame Style="{StaticResource MyCardStyle}" />
+                <Frame Style="{StaticResource MyCardStyle}" />
+                <Frame Style="{StaticResource MyCardStyle}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+    </Grid>
+</ContentPage>

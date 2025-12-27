@@ -1,0 +1,14 @@
+﻿
+  // --- ТИП: ЗНАК (Шаблон, 30 копий) ---
+  {
+    "id": "SIGN_TEMPLATE",
+    "title": "Знак",
+    "card_type": "Знак",
+    "cost": 0,
+    "power_gems": 0,
+    "set_id": "K",
+    "total_copies": 30, // <-- Количество для генерации в начале игры
+    "power_mod": 1,
+    "is_attack": false,
+    "attack_logic": null
+  }

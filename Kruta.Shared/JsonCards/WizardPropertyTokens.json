@@ -1,0 +1,154 @@
+﻿[
+  // 1. ЖЕТОН (ВЕРХНИЙ ЛЕВЫЙ)
+  {
+    "id": "JKS_01",
+    "title": "Свойство 1",
+    "type": "Колдунское Свойство",
+    "base_text": "Если ты сыграл хотя бы 4 разных типа карт в свой ход, +1 мощь и возьми 1 карту.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Played_Card_Phase_End",
+        "effect": "Conditional_Power_Draw",
+        "condition": "Played_Different_Card_Types",
+        "condition_amount": 4,
+        "payload": {
+          "power_buff": 1,
+          "draw_cards": 1
+        }
+      }
+    ]
+  },
+
+  // 2. ЖЕТОН (ВЕРХНИЙ ПРАВЫЙ)
+  {
+    "id": "JKS_02",
+    "title": "Свойство 2",
+    "type": "Колдунское Свойство",
+    "base_text": "В конце своего хода возьмите дополнительную карту за каждого волшебника, которого ты купил или получил на этом ходу.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_End_Turn_Cleanup",
+        "effect": "Draw_Cards_Per_Acquired_Card_Type",
+        "card_type_filter": "Волшебник",
+        "source": "Acquired_This_Turn"
+      }
+    ]
+  },
+
+  // 3. ЖЕТОН (СРЕДНИЙ ЛЕВЫЙ)
+  {
+    "id": "JKS_03",
+    "title": "Свойство 3",
+    "type": "Колдунское Свойство",
+    "base_text": "Каждый раз, когда ты играешь тварь в свой ход, накручивай себе столько жизней, сколько победных очков приносит эта тварь.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Play_Card",
+        "condition": "Played_Card_Type_Is_Tvar",
+        "effect": "Heal_By_Card_Value",
+        "source_value": "Played_Card_Power_Gems"
+      }
+    ]
+  },
+
+  // 4. ЖЕТОН (СРЕДНИЙ ПРАВЫЙ)
+  {
+    "id": "JKS_04",
+    "title": "Свойство 4",
+    "type": "Колдунское Свойство",
+    "base_text": "Если ты сыграл хотя бы 2 разных волшебника в свой ход, +2 мощи. Если ты сыграл хотя бы 2 разных твари в свой ход, +2 мощи.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Played_Card_Phase_End",
+        "effect": "Power_Buff_Conditional",
+        "condition": "Played_Card_Types_Count",
+        "payloads": [
+          {
+            "card_type_filter": "Волшебник",
+            "count": 2,
+            "power_amount": 2
+          },
+          {
+            "card_type_filter": "Тварь",
+            "count": 2,
+            "power_amount": 2
+          }
+        ]
+      }
+    ]
+  },
+
+  // 5. ЖЕТОН (НИЖНИЙ ЛЕВЫЙ)
+  {
+    "id": "JKS_05",
+    "title": "Свойство 5",
+    "type": "Колдунское Свойство",
+    "base_text": "Каждый раз, когда ты в свой ход играешь заклинание, смотри верхнюю карту своей колоды. Можешь её сбросить.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Play_Card",
+        "condition": "Played_Card_Type_Is_Zaklinanie",
+        "effect": "Reveal_Top_And_Optional_Discard",
+        "target_deck": "Player_Deck"
+      }
+    ]
+  },
+
+  // 6. ЖЕТОН (НИЖНИЙ ПРАВЫЙ)
+  {
+    "id": "JKS_06",
+    "title": "Свойство 6",
+    "type": "Колдунское Свойство",
+    "base_text": "Когда ты во второй раз за свой ход играешь сокровище, можешь положить любую карту из своей стопки сброса на верх своей колоды.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Play_Card",
+        "condition": "Played_Card_Type_Is_Sokrovishche_Second_Time",
+        "effect": "Move_Card_From_Discard_To_Deck_Top",
+        "target_source": "Discard_Pile",
+        "target_destination": "Deck_Top",
+        "optional": true
+      }
+    ]
+  },
+
+  // 7. ЖЕТОН (НИЖНИЙ ЛЕВЫЙ ПРОМО)
+  {
+    "id": "JKS_07",
+    "title": "Свойство 7",
+    "type": "Колдунское Свойство",
+    "base_text": "Один раз за свой ход можешь потратить 4 жизни, чтобы взять карту.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "Action_Phase",
+        "effect": "Optional_Life_For_Card",
+        "life_cost": 4,
+        "draw_amount": 1,
+        "max_uses_per_turn": 1
+      }
+    ]
+  },
+
+  // 8. ЖЕТОН (НИЖНИЙ ПРАВЫЙ ПРОМО)
+  {
+    "id": "JKS_08",
+    "title": "Свойство 8",
+    "type": "Колдунское Свойство",
+    "base_text": "Если ты покупаешь или получаешь с барахолки карту стоимостью 4 или меньше, клади её на верх своей колоды.",
+    "is_public": true,
+    "triggered_logic": [
+      {
+        "trigger_event": "On_Acquire_Card",
+        "condition": "Acquired_From_Bazar_Cost_4_Or_Less",
+        "effect": "Place_Card_On_Deck_Top"
+      }
+    ]
+  }
+]

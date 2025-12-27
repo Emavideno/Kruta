@@ -1,0 +1,310 @@
+﻿[
+  // --- Карта A (image_37e4fd.jpg / image_36fcbb.jpg) ---
+  {
+    "id": "BES_A_01",
+    "title": "Беспредел! (Сброс и Добор)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Optional_Discard_Hand_Draw_Cards",
+        "target_type": "All_Wizards",
+        "amount": 2,
+        "on_fail_effect": "Receive_Limp_Wand"
+      }
+    ]
+  },
+
+  // --- Беспредел (image_37e55b.jpg) ---
+
+  // 1. Слева сверху (Каждый колдун может уничтожить...)
+  {
+    "id": "BES_B_01",
+    "title": "Беспредел! (Уничтожение с ВО)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Optional_Destroy_Card_For_VP_And_Draw",
+        "target_type": "Self",
+        "card_source": "Hand",
+        "vp_per_cost": 1,
+        "draw_amount": 1,
+        "draw_source": "Market_Deck",
+        "condition": "Is_Destroyed_Card_Cost_3_Or_More"
+      }
+    ]
+  },
+
+  // 2. В центре сверху (Сыграй 2 случайные карты беспредела...)
+  {
+    "id": "BES_B_02",
+    "title": "Беспредел! (Рекурсия)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Play_Random_Bespredel_Cards",
+        "amount": 2,
+        "card_source": "Bespredel_Discard_Pile"
+      }
+    ]
+  },
+
+  // 3. Справа сверху (Каждый колдун может уничтожить карту с самой высокой стоимостью...)
+  {
+    "id": "BES_B_03",
+    "title": "Беспредел! (Уничтожение для ВО)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Optional_Destroy_Highest_Cost_Card",
+        "target_type": "Self",
+        "card_source": "Hand",
+        "vp_gained": 3
+      }
+    ]
+  },
+
+  // 4. Слева снизу (Каждый колдун может получить верхнюю карту основной колоды...)
+  {
+    "id": "BES_B_04",
+    "title": "Беспредел! (Добор по выбору)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Optional_Draw_From_Top_Deck_And_Destroy_Own_Permanent",
+        "target_type": "Self",
+        "draw_source": "Own_Deck",
+        "destroy_target": "Own_Permanent"
+      }
+    ]
+  },
+
+  // 5. В центре снизу (Атака: каждый колдун уничтожает случайную карту у себя на руке...)
+  {
+    "id": "BES_B_05",
+    "title": "Беспредел! (Случайное Уничтожение + Добор)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Destroy_Random_Card_And_Draw",
+        "target_type": "All_Wizards",
+        "destroy_source": "Hand",
+        "draw_source": "Shuffle_Magic_Deck",
+        "draw_amount": 1
+      }
+    ]
+  },
+
+  // 6. Справа снизу (Каждый колдун замешивает свою руку, колоду и стопку сброса вместе...)
+  {
+    "id": "BES_B_06",
+    "title": "Беспредел! (Полный Шафл)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Shuffle_All_Player_Piles",
+        "target_type": "All_Wizards"
+      },
+      {
+        "step": 2,
+        "effect": "Draw_Cards",
+        "amount": 5,
+        "target_type": "All_Wizards"
+      }
+    ]
+  },
+
+  // --- Беспредел (image_374e58.jpg / image_383714.jpg) ---
+
+  // 7. Слева сверху (Атака: каждый колдун получает вялую палочку...)
+  {
+    "id": "BES_C_01",
+    "title": "Беспредел! (Палочки Сверху)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Receive_Limp_Wand_And_Place_On_Top",
+        "target_type": "All_Wizards"
+      }
+    ]
+  },
+
+  // 8. В центре сверху (Каждый колдун суммирует стоимость карт на руке...)
+  {
+    "id": "BES_C_02",
+    "title": "Беспредел! (Добор по Стоимости Руки)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards_Conditional",
+        "target_type": "All_Wizards",
+        "amount": 2,
+        "condition": "Highest_Hand_Cost"
+      }
+    ]
+  },
+
+  // 9. Справа сверху (Разыграй групповую атаку текущей легенды)
+  {
+    "id": "BES_C_03",
+    "title": "Беспредел! (Атака Легенды)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Legendary_Group_Attack",
+        "target_type": "All_Wizards"
+      }
+    ]
+  },
+
+  // 10. Слева снизу (Атака: каждый колдун, у которого 10 или меньше жизней...)
+  {
+    "id": "BES_C_04",
+    "title": "Беспредел! (Раненые Отхватывают)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Take_Damage_Conditional",
+        "target_type": "All_Wizards",
+        "damage": 3,
+        "condition": "Life_10_Or_Less"
+      }
+    ]
+  },
+
+  // 11. В центре снизу (Каждый колдун берет карту с самой высокой стоимостью...)
+  {
+    "id": "BES_C_05",
+    "title": "Беспредел! (Урон по Стоимости)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Highest_Cost_Card_And_Take_Damage_By_Cost",
+        "target_type": "All_Wizards"
+      }
+    ]
+  },
+
+  // 12. Справа снизу (Атака: левый враг берет 2 карты.)
+  {
+    "id": "BES_C_06",
+    "title": "Беспредел! (Добор Соседу)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "target_type": "Left_Enemy",
+        "amount": 2
+      }
+    ]
+  },
+
+  // --- Беспредел (image_37e57c.jpg) ---
+
+  // 13. Слева сверху (Атака: правый враг может уничтожить 1 карту у себя на руке...)
+  {
+    "id": "BES_D_01",
+    "title": "Беспредел! (Уничтожение Соседа)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Optional_Destroy_Card_From_Hand_And_Discard",
+        "target_type": "Right_Enemy",
+        "card_source": "Hand",
+        "amount": 1
+      }
+    ]
+  },
+
+  // 14. В центре сверху (Каждый колдун кладет 3 свои жетона...)
+  {
+    "id": "BES_D_02",
+    "title": "Беспредел! (Раздача Жетонов)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Place_3_Tokens_On_Own_Deck",
+        "target_type": "All_Wizards"
+      },
+      {
+        "step": 2,
+        "effect": "Randomly_Distribute_1_Token",
+        "target_type": "All_Wizards",
+        "token_type": "Random_Token"
+      }
+    ]
+  },
+
+  // 15. Справа сверху (Разыграй каждую атаку на картах с Барахолки...)
+  {
+    "id": "BES_D_03",
+    "title": "Беспредел! (Атака Барахолки)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Play_Attack_Logic_From_Market_Cards",
+        "target_type": "Selected_Enemy"
+      }
+    ]
+  },
+
+  // 16. Слева снизу (Атака: каждый колдун, у которого 10 или больше жизней...)
+  {
+    "id": "BES_D_04",
+    "title": "Беспредел! (Толстяки Отхватывают)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Take_Damage_Conditional",
+        "target_type": "All_Wizards",
+        "damage": 5,
+        "condition": "Life_10_Or_More"
+      }
+    ]
+  },
+
+  // 17. В центре снизу (Каждый колдун раскрывает все карты у себя на руке...)
+  {
+    "id": "BES_D_05",
+    "title": "Беспредел! (Скрытая Атака)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Hand_And_Play_Attack_Against_Self",
+        "target_type": "All_Wizards"
+      }
+    ]
+  },
+
+  // 18. Справа снизу (Атака: каждый колдун кладет все карты со стопки сброса...)
+  {
+    "id": "BES_D_06",
+    "title": "Беспредел! (Сброс наверх колоды)",
+    "card_type": "Беспредел",
+    "effect_logic": [
+      {
+        "step": 1,
+        "effect": "Move_Discard_To_Top_Deck",
+        "target_type": "All_Wizards",
+        "card_source": "Discard_Pile"
+      }
+    ]
+  }
+]

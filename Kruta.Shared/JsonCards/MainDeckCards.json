@@ -1,0 +1,437 @@
+[
+  //Волшебники
+  // 1. КАРПАТЫЧ-САН
+  {
+    "id": "WIZ_01",
+    "title": "Карпатыч-Сан",
+    "card_type": "Волшебник",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Return_Card_From_Discard",
+        "card_filter": "Spell_Card",
+        "target_source": "Discard_Pile",
+        "target_destination": "Hand"
+      },
+      {
+        "step": 2,
+        "effect": "Power_Buff_Conditional",
+        "amount": 2,
+        "condition": "If_No_Spell_Returned"
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 2. АБРАКАДАБРАДОР
+  {
+    "id": "WIZ_02",
+    "title": "Абракадабрадор",
+    "card_type": "Волшебник",
+    "cost": 2,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "amount": 1
+      },
+      {
+        "step": 2,
+        "effect": "Heal_Life",
+        "amount": 2
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 3. МИША, УБИЙЦА ЕДИНОРОГОВ
+  {
+    "id": "WIZ_03",
+    "title": "Миша, Убийца Единорогов",
+    "card_type": "Волшебник",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Top_Card_Own_Deck",
+        "action": "Optional_Destroy_Or_Take_To_Hand"
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 4. ЗМЕЕВОЛК ПОЗОРНЫЙ
+  {
+    "id": "WIZ_04",
+    "title": "Змееволк Позорный",
+    "card_type": "Волшебник",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Heal_Life",
+        "amount": 2
+      }
+    ],
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target_Filtered",
+        "target_type": "All_Enemies",
+        "damage": 5,
+        "filter": "Weaker_Than_Caster"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 5. РАСПАЛЫНУН
+  {
+    "id": "WIZ_05",
+    "title": "Распалынун",
+    "card_type": "Волшебник",
+    "cost": 6,
+    "power_gems": 3,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Power_Mod_Per_Token",
+        "amount": 1,
+        "token_type": "Dead_Wizard_Token"
+      }
+    ]
+  },
+
+  // 6. СОЛНЦЕЛИКИЙ
+  {
+    "id": "WIZ_06",
+    "title": "Солнцеликий",
+    "card_type": "Волшебник",
+    "cost": 7,
+    "power_gems": 2,
+    "power_mod": 2,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "amount": 1
+      }
+    ],
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target",
+        "target_type": "Selected_Enemy",
+        "damage": 10
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 7. БЕДОВАЯ ПРИНЦЕССА
+  {
+    "id": "WIZ_07",
+    "title": "Бедовая Принцесса",
+    "card_type": "Волшебник",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Card_From_Enemy_Deck",
+        "target_type": "Selected_Enemy",
+        "deck_source": "Top_Card",
+        "payload": {
+          "damage": "Revealed_Card_Cost"
+        }
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 8. ВИАР, КОЛДУН-ВИРТУАЛ
+  {
+    "id": "WIZ_08",
+    "title": "Виар, Колдун-Виртуал",
+    "card_type": "Волшебник",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Prevent_Attack_And_Conditional_Discard",
+        "target_type": "Player_Self",
+        "draw_amount": 2,
+        "discard_amount": 1,
+        "trigger": "On_Attacked"
+      }
+    ]
+  },
+
+  // 9. БИЛЛИ АДЫШ
+  {
+    "id": "WIZ_09",
+    "title": "Билли Адыш",
+    "card_type": "Волшебник",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "on_play_trigger": [
+      {
+        "step": 1,
+        "effect": "Discard_Hand_And_Draw_Conditional",
+        "draw_amount": 4,
+        "condition": "Is_First_Played_Card_This_Turn"
+      }
+    ]
+  },
+
+  // 10. ГНОЙНЫЙ ТРЕПАНАТОР
+  {
+    "id": "WIZ_10",
+    "title": "Гнойный Трепанатор",
+    "card_type": "Волшебник",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card",
+        "target_type": "All_Enemies",
+        "amount": 1
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 11. НАДМОЗГ
+  {
+    "id": "WIZ_11",
+    "title": "Надмозг",
+    "card_type": "Волшебник",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_And_Conditional_Damage",
+        "target_type": "Selected_Enemy",
+        "card_filter": "Cost_5_Or_More",
+        "payload": {
+          "condition": "If_Card_Escaped",
+          "damage": 5
+        }
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 12. СЛАДКИЙ КОТИК
+  {
+    "id": "WIZ_12",
+    "title": "Сладкий Котик",
+    "card_type": "Волшебник",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "amount": 2
+      },
+      {
+        "step": 2,
+        "effect": "Discard_And_Heal_By_Cost",
+        "discard_amount": 1,
+        "heal_source": "Discarded_Card_Cost"
+      },
+      {
+        "step": 3,
+        "effect": "Shuffle_Token_Conditional",
+        "token_type": "Dead_Wizard_Token",
+        "condition": "Life_Is_25"
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 13. БЕЗУМНАЯ КОШАТНИЦА
+  {
+    "id": "WIZ_13",
+    "title": "Безумная Кошатница",
+    "card_type": "Волшебник",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Target_Draw_Cards",
+        "target_type": "Caster_And_Selected_Enemy",
+        "amount": 1
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Prevent_Attack_And_Conditional_Discard",
+        "trigger": "On_Attacked"
+      }
+    ]
+  },
+
+  
+
+  
+
+  // Места
+  // 1. ТОРА ЧЕРЕПЛАМЕНИ
+  {
+    "id": "LOCATION_01",
+    "title": "Тора Черепламени",
+    "card_type": "Место",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Draw_Card_On_First_Play",
+        "trigger": "On_First_Play_Spell_This_Turn"
+      }
+    ]
+  },
+
+  // 2. АРЕНА КРУТАГИДОНА
+  {
+    "id": "LOCATION_02",
+    "title": "Арена Крутагидона",
+    "card_type": "Место",
+    "cost": 7,
+    "power_gems": 2,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Double_Damage_On_Attack",
+        "trigger": "On_Play_Attack_Card"
+      },
+      {
+        "effect": "Discard_Card_On_Kill",
+        "trigger": "On_Kill_Enemy",
+        "destination": "Discard_Pile"
+      }
+    ]
+  },
+
+  // 3. ГРИБУЧЕЕ БОЛОТО
+  {
+    "id": "LOCATION_03",
+    "title": "Грибучее Болото",
+    "card_type": "Место",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Draw_Card_On_First_Play",
+        "trigger": "On_First_Play_Treasure_This_Turn"
+      }
+    ]
+  },
+
+  // 4. ШЕСТЁРОЧКА
+  {
+    "id": "LOCATION_04",
+    "title": "Шестёрочка",
+    "card_type": "Место",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Double_Buff_Effect",
+        "trigger": "On_Apply_Buff"
+      }
+    ]
+  },
+
+  // 5. ХОРОМЫ СТРАСТИ
+  {
+    "id": "LOCATION_05",
+    "title": "Хоромы Страсти",
+    "card_type": "Место",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Draw_Card_On_First_Play",
+        "trigger": "On_First_Play_Spell_This_Turn"
+      }
+    ]
+  },
+
+  // 6. ЗАМОК СПРУТОБОЙНИ
+  {
+    "id": "LOCATION_06",
+    "title": "Замок Спрутобойни",
+    "card_type": "Место",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Draw_Card_On_First_Play",
+        "trigger": "On_First_Play_Monster_This_Turn"
+      }
+    ]
+  },
+
+]
