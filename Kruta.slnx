@@ -1,8 +1,0 @@
-<Solution>
-  <Project Path="Kruta.GUI/Kruta.GUI.csproj">
-    <Deploy Solution="Debug|*" />
-  </Project>
-  <Project Path="Kruta.Server/Kruta.Server.csproj" />
-  <Project Path="Kruta.Shared/Kruta.Shared.csproj" />
-  <Project Path="Kruta.TestClient/Kruta.TestClient.csproj" Id="b07546d3-34de-4267-bffc-186e7fea43fb" />
-</Solution>
