@@ -36,8 +36,8 @@
         </Style>
 
         <Style x:Key="MyCardStyle" TargetType="Frame">
-            <Setter Property="WidthRequest" Value="75" />
-            <Setter Property="HeightRequest" Value="115" />
+            <Setter Property="WidthRequest" Value="90" />
+            <Setter Property="HeightRequest" Value="135" />
             <Setter Property="BackgroundColor" Value="White" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="0" />
@@ -59,15 +59,36 @@
 
         <DataTemplate x:Key="CardTemplate">
             <Frame Style="{StaticResource MyCardStyle}" BorderColor="Gold" BackgroundColor="#F0F0F0">
-                <Grid RowDefinitions="Auto, *, Auto">
+                <Grid RowDefinitions="Auto, *, Auto, Auto">
                     <Label Text="{Binding Cost, StringFormat='Cost: {0}'}" 
-                            TextColor="DarkGoldenrod" FontAttributes="Bold" FontSize="10" Margin="2,0"/>
-                    <VerticalStackLayout Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center">
+                            TextColor="DarkGoldenrod" FontAttributes="Bold" FontSize="10" Margin="4,2"/>
+
+                    <VerticalStackLayout Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center" Padding="2">
                         <Label Text="{Binding Name}" TextColor="Black" 
-                                HorizontalTextAlignment="Center" FontSize="11" FontAttributes="Bold" />
+                                HorizontalTextAlignment="Center" FontSize="10" FontAttributes="Bold" MaxLines="2" />
                     </VerticalStackLayout>
+
                     <Label Grid.Row="2" Text="{Binding Initiative}" TextColor="Blue" 
-                            HorizontalOptions="End" FontSize="10" Margin="2"/>
+                            HorizontalOptions="End" FontSize="10" Margin="4,0"/>
+
+                    <Button Grid.Row="3" 
+                            Text="РАЗЫГРАТЬ"
+                            FontSize="9"
+                            HeightRequest="25"
+                            Padding="0"
+                            Margin="2"
+                            BackgroundColor="#27AE60"
+                            Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.PlayCardCommand}"
+                            CommandParameter="{Binding .}">
+                        <Button.Triggers>
+                            <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </DataTrigger>
+                            <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.HasPlayedCardThisTurn}" Value="True">
+                                <Setter Property="IsVisible" Value="False"/>
+                            </DataTrigger>
+                        </Button.Triggers>
+                    </Button>
                 </Grid>
             </Frame>
         </DataTemplate>
@@ -79,9 +100,19 @@
 
         <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" Spacing="5">
             <Label Text="KRUTA" FontSize="40" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
-            <Label Text="{Binding GameStatus}" FontSize="18" TextColor="Yellow" FontAttributes="Bold" HorizontalOptions="Center" />
 
-            <Grid ColumnDefinitions="80, *" HorizontalOptions="Center" WidthRequest="550" HeightRequest="160">
+            <Label Text="{Binding GameStatus}" 
+                   FontSize="22" 
+                   TextColor="Yellow" 
+                   FontAttributes="Bold" 
+                   HorizontalOptions="Center"
+                   HorizontalTextAlignment="Center">
+                <Label.Shadow>
+                    <Shadow Brush="Black" Offset="2,2" Radius="3" Opacity="0.8" />
+                </Label.Shadow>
+            </Label>
+
+            <Grid ColumnDefinitions="80, *" HorizontalOptions="Center" WidthRequest="550" HeightRequest="160" Margin="0,10,0,0">
                 <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="5">
                     <Frame BackgroundColor="#2C3E50" BorderColor="Goldenrod" CornerRadius="5" WidthRequest="60" HeightRequest="90" Padding="0">
                         <Label Text="DECK" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold" Rotation="-45"/>
@@ -167,6 +198,7 @@
         </VerticalStackLayout>
 
         <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="5">
+
             <Button Text="ЗАВЕРШИТЬ ХОД"
                     Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EndTurnCommand}"
                     IsVisible="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}"
@@ -199,7 +231,7 @@
 
             <CollectionView ItemsSource="{Binding MyHandCards}" 
                             ItemTemplate="{StaticResource CardTemplate}" 
-                            HeightRequest="125"
+                            HeightRequest="145" 
                             VerticalOptions="End"
                             HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemsLayout>

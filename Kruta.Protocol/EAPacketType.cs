@@ -18,6 +18,7 @@ namespace Kruta.Protocol
         GameStateUpdate,     // 4:1 (Сервер -> Клиент: обновление состояния игры)
         TurnAction,          //5: Ход. Подтип 0: Конец хода (от клиента)
         TurnStatus,           //Тип 5: Ход. Подтип 1: Начало хода (от сервера конкретному игроку)
-        AttackAction            //5:2
+        AttackAction,            //5:2
+        PlayCardAction
     }
 }

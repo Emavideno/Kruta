@@ -12,8 +12,7 @@ namespace Kruta.Server.Handlers
             client.IsReady = !client.IsReady;
             Console.WriteLine($"[LOBBY] Игрок {client.Username} (ID: {client.Id}) теперь готов: {client.IsReady}");
 
-            // 2. Формируем пакет уведомления (Type 3, Subtype 1)
-            // Поле 3: Ник игрока, Поле 4: Байт статуса (1 или 0)
+            // 2. Формируем пакет уведомления (Type 3, Subtype 1) для обновления UI лобби
             var statusPacket = EAPacket.Create(3, 1);
             statusPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(client.Username));
             statusPacket.SetValueRaw(4, new byte[] { (byte)(client.IsReady ? 1 : 0) });
@@ -31,11 +30,19 @@ namespace Kruta.Server.Handlers
 
                 // 4. Проверяем условие начала игры
                 // Минимум 2 игрока и все имеют IsReady == true
-                // Запускаем игру только если она еще не начата
                 if (!server.IsGameStarted && server.Clients.Count >= 2 && server.Clients.All(c => c.IsReady))
                 {
-                    server.IsGameStarted = true; // Фиксируем старт
+                    server.IsGameStarted = true; // Фиксируем старт, чтобы не запустить дважды
+
+                    // Заполняем колоду, раздаем карты и шлем сигнал смены экрана (4, 0)
                     StartGame(server);
+
+                    // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ ---
+                    // После того как экраны сменились, запускаем таймер первого хода.
+                    // Метод StartFirstTurnAsync через 2 секунды пришлет пакет (5, 1),
+                    // который сделает IsMyTurn = true у первого игрока.
+                    _ = server.StartFirstTurnAsync();
+                    // --------------------------
                 }
             }
         }
@@ -74,11 +81,11 @@ namespace Kruta.Server.Handlers
                 server.MainDeck[n] = value;
             }
 
-            // 3. Берем 5 карт для барахолки из начала перемешанной колоды
+            // 3. Берем 5 карт для барахолки
             server.Baraholka = server.MainDeck.Take(5).ToArray();
             server.MainDeck.RemoveRange(0, 5);
 
-            // 5. Рассылаем игрокам данные
+            // 4. Рассылаем игрокам данные (Инициализация игры)
             lock (server.Clients)
             {
                 for (int i = 0; i < server.Clients.Count; i++)
@@ -86,30 +93,32 @@ namespace Kruta.Server.Handlers
                     var targetClient = server.Clients[i];
                     var initPacket = EAPacket.Create(4, 1);
 
+                    // Поле 5: ID игрока в этой сессии (индекс)
                     initPacket.SetValueRaw(5, BitConverter.GetBytes(i));
 
-                    // Барахолка из сервера
-                    byte[] baraholkaBytes = new byte[20];
-                    Buffer.BlockCopy(server.Baraholka, 0, baraholkaBytes, 0, 20);
+                    // Поле 6: Карты барахолки
+                    byte[] baraholkaBytes = new byte[server.Baraholka.Length * 4];
+                    Buffer.BlockCopy(server.Baraholka, 0, baraholkaBytes, 0, baraholkaBytes.Length);
                     initPacket.SetValueRaw(6, baraholkaBytes);
 
-                    // Раздача карт из ОБЩЕЙ колоды
+                    // Поле 7: Раздача стартовых карт (по 12 штук)
                     int[] playerStartCards = server.MainDeck.Take(12).ToArray();
                     server.MainDeck.RemoveRange(0, 12);
-
-                    // Актуальный остаток
-                    initPacket.SetValueRaw(8, BitConverter.GetBytes(server.MainDeck.Count));
 
                     byte[] startCardsBytes = new byte[playerStartCards.Length * 4];
                     Buffer.BlockCopy(playerStartCards, 0, startCardsBytes, 0, startCardsBytes.Length);
                     initPacket.SetValueRaw(7, startCardsBytes);
 
+                    // Поле 8: Остаток колоды
+                    initPacket.SetValueRaw(8, BitConverter.GetBytes(server.MainDeck.Count));
+
                     targetClient.Send(initPacket);
                     Console.WriteLine($"[GAME] Данные отправлены {targetClient.Username}. Выдано 12 карт.");
                 }
 
+                // Обновляем счетчик колоды для всех (синхронизация)
                 int finalCount = server.MainDeck.Count;
-                var finalDeckPacket = EAPacket.Create(4, 1); // Или создайте подтип для обновления колоды
+                var finalDeckPacket = EAPacket.Create(4, 1);
                 finalDeckPacket.SetValueRaw(8, BitConverter.GetBytes(finalCount));
 
                 foreach (var c in server.Clients)
@@ -118,15 +127,14 @@ namespace Kruta.Server.Handlers
                 }
             }
 
-
-            // 5. Сигнал к началу игры (смена экрана)
+            // 5. Сигнал к смене экрана (открываем PlayView)
             var startSignal = EAPacket.Create(4, 0);
             lock (server.Clients)
             {
                 foreach (var c in server.Clients) c.Send(startSignal);
             }
 
-            Console.WriteLine("[GAME] Игра запущена успешно.");
+            Console.WriteLine("[GAME] Команды инициализации разосланы. Ожидание первого хода...");
         }
     }
 }

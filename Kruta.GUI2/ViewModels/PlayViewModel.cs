@@ -12,6 +12,7 @@ namespace Kruta.GUI2.ViewModels
     public partial class PlayViewModel : ObservableObject
     {
         private readonly NetworkService _networkService;
+        private CancellationTokenSource? _statusTimerTokenSource;
 
         [ObservableProperty]
         private string _gameStatus = "Ожидание игроков...";
@@ -35,9 +36,13 @@ namespace Kruta.GUI2.ViewModels
         [ObservableProperty]
         private bool _isDead = false;
 
-        // --- НОВОЕ СВОЙСТВО ПОБЕДЫ ---
         [ObservableProperty]
         private bool _isWinner = false;
+
+        [ObservableProperty]
+        private bool _hasPlayedCardThisTurn = false;
+
+        private string _currentTurnHolderName = "";
 
         public ObservableCollection<OpponentDisplay> Opponents { get; } = new()
         {
@@ -66,12 +71,7 @@ namespace Kruta.GUI2.ViewModels
 
             _networkService.SendPacket(EAPacket.Create(2, 0));
 
-            BaraholkaCards.Add(new SomeCardMini { Name = "Тест Карта", Cost = 5, CardId = 1 });
-
-            // Хардкод для теста (сервер это перезапишет)
-            IsMyTurn = true;
-            MyPower = 1;
-            GameStatus = "Вы ходите первым!";
+            // Тестовая карта удалена для чистоты, сервер пришлет актуальные
         }
 
         private void HandlePacketWrapper(EAPacket p)
@@ -83,7 +83,7 @@ namespace Kruta.GUI2.ViewModels
         {
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Получен пакет: Type={p.PacketType}, Subtype={p.PacketSubtype}");
 
-            // Тип 2: Список игроков
+            // Тип 2, Подтип 1: Список игроков
             if (p.PacketType == 2 && p.PacketSubtype == 1)
             {
                 var rawName = p.GetValueRaw(3);
@@ -123,8 +123,6 @@ namespace Kruta.GUI2.ViewModels
                             opponent.Health = newHp;
                         }
                     }
-
-                    // --- ПРОВЕРКА НА ПОБЕДУ ПОСЛЕ ЛЮБОГО ИЗМЕНЕНИЯ HP ---
                     CheckWinCondition();
                 }
             }
@@ -159,34 +157,76 @@ namespace Kruta.GUI2.ViewModels
             // Тип 5, Подтип 1: Передача хода
             if (p.PacketType == 5 && p.PacketSubtype == 1)
             {
-                string activePlayerName = p.HasField(3) ? Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim() : "";
+                _currentTurnHolderName = p.HasField(3) ? Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim() : "";
                 int powerValue = p.HasField(4) ? BitConverter.ToInt32(p.GetValueRaw(4), 0) : 0;
 
-                if (activePlayerName == _networkService.PlayerName)
+                UpdateDefaultStatus();
+
+                if (_currentTurnHolderName == _networkService.PlayerName)
                 {
-                    IsMyTurn = !IsDead && !IsWinner; // Не даем ходить, если мертв или уже победил
+                    IsMyTurn = !IsDead && !IsWinner;
                     MyPower = (IsDead || IsWinner) ? 0 : powerValue;
+                    HasPlayedCardThisTurn = false;
                 }
                 else
                 {
                     IsMyTurn = false;
                 }
             }
+
+            // --- НОВОЕ: Тип 5, Подтип 3: Уведомление о розыгрыше карты ---
+            if (p.PacketType == 5 && p.PacketSubtype == 3)
+            {
+                if (p.HasField(4))
+                {
+                    string message = Encoding.UTF8.GetString(p.GetValueRaw(4)).Trim();
+                    ShowTemporaryStatus(message);
+                }
+            }
         }
 
-        // --- НОВЫЙ МЕТОД ЛОГИКИ ПОБЕДЫ ---
+        private void UpdateDefaultStatus()
+        {
+            if (IsDead) { GameStatus = "ВЫ УМЕРЛИ"; return; }
+            if (IsWinner) { GameStatus = "ПОБЕДА!"; return; }
+
+            if (_currentTurnHolderName == _networkService.PlayerName)
+                GameStatus = "Ваш ход";
+            else if (!string.IsNullOrEmpty(_currentTurnHolderName))
+                GameStatus = $"Ход игрока: {_currentTurnHolderName}";
+            else
+                GameStatus = "Ожидание...";
+        }
+
+        private async void ShowTemporaryStatus(string message)
+        {
+            // Отменяем предыдущий таймер, если он был запущен
+            _statusTimerTokenSource?.Cancel();
+            _statusTimerTokenSource = new CancellationTokenSource();
+            var token = _statusTimerTokenSource.Token;
+
+            GameStatus = message;
+
+            try
+            {
+                // Ждем 3 секунды
+                await Task.Delay(3000, token);
+
+                // Возвращаем стандартный статус
+                UpdateDefaultStatus();
+            }
+            catch (TaskCanceledException)
+            {
+                // Игнорируем, если таймер был перебит новым сообщением
+            }
+        }
+
         private void CheckWinCondition()
         {
-            // Если мы уже мертвы, победить не можем
             if (IsDead) return;
-
-            // Проверяем, есть ли вообще за столом другие подключенные игроки
             bool anyOpponentsJoined = Opponents.Any(o => o.IsConnected);
-
-            // Считаем тех, кто еще жив среди подключенных
             int aliveOpponents = Opponents.Count(o => o.IsConnected && !o.IsDead);
 
-            // Если кто-то был подключен, но теперь живых врагов 0 — мы победили
             if (anyOpponentsJoined && aliveOpponents == 0)
             {
                 IsWinner = true;
@@ -197,10 +237,24 @@ namespace Kruta.GUI2.ViewModels
         }
 
         [RelayCommand]
+        private void PlayCard(ICardMini card)
+        {
+            if (card == null || !IsMyTurn || HasPlayedCardThisTurn || IsDead) return;
+
+            var packet = EAPacket.Create(5, 3);
+            packet.SetValueRaw(3, BitConverter.GetBytes(card.CardId));
+            _networkService.SendPacket(packet);
+
+            MyHandCards.Remove(card);
+            HasPlayedCardThisTurn = true;
+        }
+
+        [RelayCommand]
         private void EndTurn()
         {
             if (IsDead || IsWinner || !IsMyTurn) return;
             IsMyTurn = false;
+            HasPlayedCardThisTurn = false;
             GameStatus = "Передача хода...";
             _networkService.SendPacket(EAPacket.Create(5, 0));
         }
@@ -231,7 +285,6 @@ namespace Kruta.GUI2.ViewModels
             if (opponentsToShow.Count > 1) { Opponents[0].Name = opponentsToShow[1]; Opponents[0].IsConnected = true; }
             if (opponentsToShow.Count > 2) { Opponents[2].Name = opponentsToShow[2]; Opponents[2].IsConnected = true; }
 
-            // После пересборки стола тоже проверим состояние
             CheckWinCondition();
         }
 
@@ -266,7 +319,7 @@ namespace Kruta.GUI2.ViewModels
             packet.SetValueRaw(3, Encoding.UTF8.GetBytes(targetName));
             _networkService.SendPacket(packet);
 
-            GameStatus = $"Атака на {targetName} (-{dmg} HP)!";
+            ShowTemporaryStatus($"Атака на {targetName} (-{dmg} HP)!");
         }
     }
 

@@ -6,11 +6,14 @@ using Kruta.Shared.Models;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
 using Kruta.Shared.Mini;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace Kruta.Server
 {
@@ -50,6 +53,7 @@ namespace Kruta.Server
             EAPacketTypeManager.RegisterType(EAPacketType.TurnAction, 5, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.TurnStatus, 5, 1);
             EAPacketTypeManager.RegisterType(EAPacketType.AttackAction, 5, 2);
+            EAPacketTypeManager.RegisterType(EAPacketType.PlayCardAction, 5, 3);
 
             _handlers = new Dictionary<EAPacketType, IPacketHandler>
             {
@@ -57,10 +61,10 @@ namespace Kruta.Server
                 { EAPacketType.PlayerListRequest, new PlayerListHandler() },
                 { EAPacketType.ToggleReady, new ReadyHandler() },
                 { EAPacketType.TurnAction, new TurnHandler() },
-                { EAPacketType.AttackAction, new TurnHandler() }
-
-                };
-            }
+                { EAPacketType.AttackAction, new TurnHandler() },
+                { EAPacketType.PlayCardAction, new TurnHandler() } // Привязываем обработку карты к TurnHandler
+            };
+        }
 
         private ServerSettings LoadSettings()
         {
@@ -70,7 +74,6 @@ namespace Kruta.Server
                 if (File.Exists(path))
                 {
                     string json = File.ReadAllText(path);
-                    // Если файл пустой или содержит мусор, Deserialize выбросит исключение
                     return JsonSerializer.Deserialize<ServerSettings>(json) ?? new ServerSettings();
                 }
             }
@@ -95,22 +98,17 @@ namespace Kruta.Server
             _isRunning = true;
             Console.WriteLine($"[SERVER] Запущен на {ip}:{_settings.Port}");
 
-
             try
             {
                 while (_isRunning)
                 {
-                    // Асинхронно ждем клиента
                     TcpClient tcpClient = await _listener.AcceptTcpClientAsync();
-
                     Socket clientSocket = tcpClient.Client;
-
-                    // Создаем объект игрока. Передаем ему сокет и ссылку на текущий сервер (this).
                     var clientObject = new ClientObject(clientSocket, this);
 
-                    lock (Clients) // Запрещаем другим потокам трогать список игроков в эту миллисекунду.
+                    lock (Clients)
                     {
-                        Clients.Add(clientObject); // Добавляем новичка в "комнату".
+                        Clients.Add(clientObject);
                     }
                 }
             }
@@ -122,20 +120,15 @@ namespace Kruta.Server
             {
                 Stop();
             }
-
         }
 
-
-        //Приемка сообщения от клиента
         public void OnMessageReceived(ClientObject client, EAPacket packet)
         {
             try
             {
-                //узнаем, что за событие пришло
                 EAPacketType type = EAPacketTypeManager.GetTypeFromPacket(packet);
                 Console.WriteLine($"[SERVER] Получен пакет от клиента {client.Id}. Type={packet.PacketType} Subtype={packet.PacketSubtype} MappedType={type}");
 
-                // Ищем обработчик в словаре для вызова логики в зависимости от типа пакета
                 if (_handlers.TryGetValue(type, out var handler))
                 {
                     handler.Handle(client, packet);
@@ -151,7 +144,6 @@ namespace Kruta.Server
             }
         }
 
-
         public void Stop()
         {
             _isRunning = false;
@@ -165,25 +157,19 @@ namespace Kruta.Server
             Console.WriteLine("[SERVER] Остановлен.");
         }
 
-
-
-        //отрубка игрока 
         public void RemoveConnection(string id)
         {
-            lock (Clients) // Снова блокируем список для безопасности (потокобезопасность).
+            lock (Clients)
             {
-                // Ищем в списке клиента, у которого Id совпадает с тем, что нам передали.
                 var client = Clients.FirstOrDefault(c => c.Id == id);
-
                 if (client != null)
                 {
-                    Clients.Remove(client); // Удаляем его. Теперь сервер о нем не знает.
+                    Clients.Remove(client);
                     Console.WriteLine($"[SERVER] Клиент {id} отключен.");
                 }
             }
         }
 
-        //Изменение хп игрока
         public void BroadcastPlayerHp(ClientObject targetClient)
         {
             var hpPacket = EAPacket.Create(3, 2);
@@ -201,8 +187,6 @@ namespace Kruta.Server
             }
         }
 
-        // В GameServer2.cs метод уже почти правильный, убедитесь, что он такой:
-        // В GameServer2.cs
         public async Task StartFirstTurnAsync()
         {
             Console.WriteLine("[SERVER] Подготовка к первому ходу...");
@@ -213,26 +197,17 @@ namespace Kruta.Server
                 if (Clients.Count > 0)
                 {
                     CurrentPlayerIndex = 0;
-
-                    // 1. Сбрасываем всем в 0
                     foreach (var c in Clients) c.PlayerData.TurnCount = 0;
 
-                    // --- ВОТ ЭТА СТРОКА РЕШАЕТ ПРОБЛЕМУ ---
-                    // Говорим серверу, что ПЕРВЫЙ игрок УЖЕ находится на своем 1-м ходу
+                    // Первый игрок уже на 1-м ходу
                     Clients[0].PlayerData.TurnCount = 1;
-                    // --------------------------------------
 
-                    // Теперь, когда ты нажмешь "Конец хода", сервер переключит на второго,
-                    // а когда вернется к тебе, он прибавит к этой единице еще одну и пришлет 2.
-
-                    NotifyCurrentPlayer(); // Этот метод разошлет пакет 5:1 (Игрок 1, Мощь 1)
-
+                    NotifyCurrentPlayer();
                     Console.WriteLine($"[SERVER] Игра официально стартовала. Ходит: {Clients[0].Username}");
                 }
             }
         }
 
-        // Метод уведомления ВСЕХ о том, чей сейчас ход
         private void NotifyCurrentPlayer()
         {
             lock (Clients)
@@ -240,16 +215,10 @@ namespace Kruta.Server
                 if (Clients.Count == 0) return;
 
                 var activeClient = Clients[CurrentPlayerIndex];
-
-                // ЛОГИКА МОЩИ
-                int oldTurnCount = activeClient.PlayerData.TurnCount;
-                activeClient.PlayerData.TurnCount++; // Увеличиваем счетчик ходов
+                activeClient.PlayerData.TurnCount++;
                 activeClient.PlayerData.Power = activeClient.PlayerData.TurnCount;
 
-                Console.WriteLine($"[POWER LOG] Игрок: {activeClient.Username}");
-                Console.WriteLine($"[POWER LOG] Старый TurnCount: {oldTurnCount}");
-                Console.WriteLine($"[POWER LOG] НОВЫЙ TurnCount: {activeClient.PlayerData.TurnCount}");
-                Console.WriteLine($"[POWER LOG] Отправляемая Мощь (Power): {activeClient.PlayerData.Power}");
+                Console.WriteLine($"[POWER LOG] Игрок: {activeClient.Username}, Мощь: {activeClient.PlayerData.Power}");
 
                 var turnPacket = EAPacket.Create(5, 1);
                 turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
@@ -262,54 +231,37 @@ namespace Kruta.Server
             }
         }
 
-        // Публичный метод для переключения на следующего
-        // Публичный метод для переключения на следующего живого игрока
         public void NextTurn()
         {
             lock (Clients)
             {
                 if (Clients.Count == 0) return;
 
-                Console.WriteLine("\n=== [NEXT TURN START] ===");
-                Console.WriteLine($"[LOG] Игрок {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex}) закончил ход.");
-
                 int startingIndex = CurrentPlayerIndex;
                 bool foundAlive = false;
 
-                // Цикл поиска следующего живого игрока
                 while (!foundAlive)
                 {
                     CurrentPlayerIndex++;
+                    if (CurrentPlayerIndex >= Clients.Count) CurrentPlayerIndex = 0;
 
-                    // Если вышли за пределы списка, возвращаемся к началу
-                    if (CurrentPlayerIndex >= Clients.Count)
-                    {
-                        CurrentPlayerIndex = 0;
-                    }
-
-                    // Проверяем здоровье потенциального кандидата на ход
                     if (Clients[CurrentPlayerIndex].PlayerData.Hp > 0)
                     {
                         foundAlive = true;
                     }
                     else
                     {
-                        Console.WriteLine($"[SKIP] Игрок {Clients[CurrentPlayerIndex].Username} мертв. Пропускаем ход.");
+                        Console.WriteLine($"[SKIP] Игрок {Clients[CurrentPlayerIndex].Username} мертв. Пропускаем.");
                     }
 
-                    // Защита от бесконечного цикла (если вдруг все игроки умерли)
                     if (CurrentPlayerIndex == startingIndex && !foundAlive)
                     {
-                        Console.WriteLine("[CRITICAL] Все игроки мертвы или произошла ошибка очереди.");
+                        Console.WriteLine("[CRITICAL] Все игроки мертвы.");
                         return;
                     }
                 }
 
-                Console.WriteLine($"[LOG] Следующий живой игрок: {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex})");
-
-                // Уведомляем всех о новом активном игроке
                 NotifyCurrentPlayer();
-                Console.WriteLine("=== [NEXT TURN END] ===\n");
             }
         }
 
@@ -317,59 +269,59 @@ namespace Kruta.Server
         {
             lock (Clients)
             {
-                Console.WriteLine($"\n--- [LOG ATTACK START] ---");
-                Console.WriteLine($"[DEBUG] Игрок {attacker.Username} бьет цель: '{targetName}'");
+                if (Clients.Count <= CurrentPlayerIndex || Clients[CurrentPlayerIndex].Id != attacker.Id) return;
+                if (attacker.PlayerData.Power <= 0) return;
 
-                // 1. Проверка очереди
-                if (Clients.Count <= CurrentPlayerIndex || Clients[CurrentPlayerIndex].Id != attacker.Id)
-                {
-                    Console.WriteLine($"[CHEATER] Ошибка: {attacker.Username} пытался атаковать вне очереди!");
-                    return;
-                }
-
-                // 2. Проверка наличия мощи
-                if (attacker.PlayerData.Power <= 0)
-                {
-                    Console.WriteLine($"[GAME] У {attacker.Username} недостаточно мощи (Текущая: {attacker.PlayerData.Power})");
-                    return;
-                }
-
-                // 3. Поиск цели
                 var target = Clients.FirstOrDefault(c => c.Username.Trim().Equals(targetName.Trim(), StringComparison.OrdinalIgnoreCase));
+                if (target == null) return;
 
-                if (target == null)
-                {
-                    Console.WriteLine($"[ERROR] Цель '{targetName}' не найдена!");
-                    Console.WriteLine("[DEBUG] Список доступных имен на сервере:");
-                    foreach (var c in Clients)
-                    {
-                        Console.WriteLine($"  - '{c.Username}' (ID: {c.Id})");
-                    }
-                    return;
-                }
-
-                // 4. Расчет урона
                 int damage = attacker.PlayerData.Power;
-                int oldHp = target.PlayerData.Hp;
-
-                // Применение
                 attacker.PlayerData.Power = 0;
                 target.PlayerData.Hp -= damage;
 
-                Console.WriteLine($"[SUCCESS] Попадание! {target.Username}: {oldHp} HP -> {target.PlayerData.Hp} HP. Урон: {damage}");
-
-                // 5. Рассылка HP жертвы всем
                 BroadcastPlayerHp(target);
 
-                // 6. Обнуление мощи у атакующего (отправляем ему пакет 5:1)
                 var powerUpdatePacket = EAPacket.Create(5, 1);
                 powerUpdatePacket.SetValueRaw(3, Encoding.UTF8.GetBytes(attacker.Username));
                 powerUpdatePacket.SetValueRaw(4, BitConverter.GetBytes(0));
-
                 attacker.Send(powerUpdatePacket);
-                Console.WriteLine($"[DEBUG] Мощь атакующего {attacker.Username} сброшена в 0.");
-                Console.WriteLine($"--- [LOG ATTACK END] ---\n");
             }
         }
+
+        // --- ЛОГИКА КАРТ ---
+
+        public void ProcessPlayCard(ClientObject player, int cardId)
+        {
+            string cardName = GetCardNameById(cardId);
+            string message = $"Карта \"{cardName}\" разыграна!";
+            Console.WriteLine($"[GAME] {player.Username} разыграл: {cardName}");
+
+            var notifyPacket = EAPacket.Create(5, 3);
+            notifyPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(player.Username));
+            notifyPacket.SetValueRaw(4, Encoding.UTF8.GetBytes(message));
+
+            lock (Clients)
+            {
+                foreach (var c in Clients)
+                {
+                    c.Send(notifyPacket);
+                }
+            }
+        }
+
+        private string GetCardNameById(int id) => id switch
+        {
+            1 => "Хилая палочка",
+            2 => "Боевой саксофон",
+            3 => "Пшик",
+            4 => "Сопливый рыцарь",
+            5 => "Близнецы",
+            6 => "Волшебная палочка",
+            7 => "Знак",
+            8 => "Дикая магия",
+            9 => "Инферно",
+            10 => "Крутагидон",
+            _ => "Неизвестная карта"
+        };
     }
 }
