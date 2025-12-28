@@ -162,21 +162,49 @@ namespace Kruta.GUI2.ViewModels
                 }
             }
 
+            // Type 5: Turn, Subtype 1: Server объявляет текущего игрока
             if (p.PacketType == 5 && p.PacketSubtype == 1)
             {
+                // 1. Извлекаем имя того, кто сейчас ходит (из поля 3)
                 string activePlayerName = "";
                 if (p.HasField(3))
                 {
                     activePlayerName = Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim();
                 }
 
-                MainThread.BeginInvokeOnMainThread(() => {
-                    // Если имя в пакете совпадает с моим — это мой ход!
-                    IsMyTurn = (activePlayerName == _networkService.PlayerName);
+                // 2. Обновляем UI в главном потоке
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    // Сравниваем имя сервера с моим именем
+                    if (activePlayerName == _networkService.PlayerName)
+                    {
+                        IsMyTurn = true; // Включает кнопку
+                        GameStatus = "ВАШ ХОД! ДЕЙСТВУЙТЕ!";
+                    }
+                    else
+                    {
+                        IsMyTurn = false; // Выключает кнопку
+                        GameStatus = $"Сейчас ходит: {activePlayerName}";
+                    }
 
-                    GameStatus = IsMyTurn ? "ВАШ ХОД!" : $"Ходит {activePlayerName}...";
+                    
                 });
             }
+        }
+
+        // Команда кнопки (у тебя она уже почти правильная, проверяем)
+        [RelayCommand]
+        private void EndTurn()
+        {
+            if (!IsMyTurn) return; // Защита на клиенте
+
+            // Визуальный отклик мгновенно
+            IsMyTurn = false;
+            GameStatus = "Передача хода...";
+
+            // Отправляем на сервер: Type 5, Subtype 0 (Я всё)
+            var packet = EAPacket.Create(5, 0);
+            _networkService.SendPacket(packet);
         }
 
         private void RebuildTable()
@@ -244,16 +272,7 @@ namespace Kruta.GUI2.ViewModels
             };
         }
 
-        [RelayCommand]
-        private void EndTurn()
-        {
-            IsMyTurn = false;
-            GameStatus = "Ожидание хода противника...";
-
-            // Отправляем пакет "Конец хода" (Type 5, Subtype 0)
-            var packet = EAPacket.Create(5, 0);
-            _networkService.SendPacket(packet);
-        }
+       
     }
 
     public partial class OpponentDisplay : ObservableObject

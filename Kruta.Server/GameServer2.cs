@@ -233,21 +233,25 @@ namespace Kruta.Server
             }
         }
 
-        // Метод уведомления игрока, что сейчас его ход
+        // Метод уведомления ВСЕХ о том, чей сейчас ход
         private void NotifyCurrentPlayer()
         {
-            if (Clients.Count == 0) return;
-
-            var activeClient = Clients[CurrentPlayerIndex];
-
-            // Создаем пакет хода
-            var turnPacket = EAPacket.Create(5, 1);
-            // Добавим в пакет ID того, кто сейчас должен ходить (например, в поле 3)
-            turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
-
-            // Рассылаем ВСЕМ. Каждый клиент сам проверит: "Это мой ник? Если да - включаю кнопку"
             lock (Clients)
             {
+                if (Clients.Count == 0) return;
+
+                // Берем текущего игрока по индексу
+                var activeClient = Clients[CurrentPlayerIndex];
+
+                Console.WriteLine($"[GAME] Новый активный игрок: {activeClient.Username} (Index: {CurrentPlayerIndex})");
+
+                // Создаем пакет (Type 5: Turn, Subtype 1: Update Status)
+                var turnPacket = EAPacket.Create(5, 1);
+
+                // Поле 3: Имя игрока, который должен сейчас ходить
+                turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
+
+                // Рассылаем пакет ВСЕМ игрокам
                 foreach (var c in Clients)
                 {
                     c.Send(turnPacket);
@@ -255,13 +259,23 @@ namespace Kruta.Server
             }
         }
 
-        // Метод переключения хода
+        // Публичный метод для переключения на следующего
         public void NextTurn()
         {
             lock (Clients)
             {
+                if (Clients.Count == 0) return;
+
+                // Увеличиваем индекс
                 CurrentPlayerIndex++;
-                if (CurrentPlayerIndex >= Clients.Count) CurrentPlayerIndex = 0;
+
+                // Если вышли за пределы списка, возвращаемся к началу (цикл)
+                if (CurrentPlayerIndex >= Clients.Count)
+                {
+                    CurrentPlayerIndex = 0;
+                }
+
+                // Уведомляем всех
                 NotifyCurrentPlayer();
             }
         }
