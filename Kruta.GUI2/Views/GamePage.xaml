@@ -1,0 +1,33 @@
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Kruta.GUI2.ViewModels"
+             x:Class="Kruta.GUI2.Views.GamePage"
+             Title="Список игроков">
+
+    <VerticalStackLayout Padding="20" Spacing="15">
+        <Label Text="Лобби игры" FontSize="28" HorizontalOptions="Center" />
+
+        <CollectionView ItemsSource="{Binding Players}">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:PlayerDisplay">
+                    <Frame Margin="0,5" Padding="10" BorderColor="{Binding StatusColor}">
+                        <HorizontalStackLayout Spacing="15">
+                            <Label Text="{Binding Name}" FontSize="18" VerticalOptions="Center" />
+                            <Label Text="{Binding StatusText}" 
+                           TextColor="{Binding StatusColor}" 
+                           FontAttributes="Bold" 
+                           VerticalOptions="Center" />
+                        </HorizontalStackLayout>
+                    </Frame>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <Button Text="ГОТОВ К ИГРЕ" 
+            Command="{Binding ToggleReadyCommand}"
+            BackgroundColor="Green" 
+            TextColor="White"
+            HeightRequest="60"
+            CornerRadius="30" />
+    </VerticalStackLayout>
+</ContentPage>

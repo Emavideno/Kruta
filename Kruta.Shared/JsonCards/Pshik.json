@@ -1,0 +1,15 @@
+﻿[
+  // --- ТИП: ПШИК (Шаблон, 15 копий) ---
+  {
+    "id": "POOF_TEMPLATE",
+    "title": "Пшик",
+    "card_type": "Пшик",
+    "cost": 0,
+    "power_gems": 0,
+    "set_id": "K",
+    "total_copies": 15, // <-- Количество для генерации в начале игры
+    "power_mod": 0,
+    "is_attack": false,
+    "attack_logic": null
+  }
+]

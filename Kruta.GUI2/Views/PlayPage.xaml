@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:vm="clr-namespace:Kruta.GUI2.ViewModels"
+             x:Class="Kruta.GUI2.Views.PlayPage"
+             x:Name="ThisPage"
+             BackgroundColor="#1B3F2F"
+             Title="Игровое поле">
+
+    <ContentPage.Resources>
+        <Style x:Key="HealthLabelStyle" TargetType="Label">
+            <Setter Property="TextColor" Value="#FF4C4C" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+        </Style>
+
+        <Style x:Key="HealthBadgeStyle" TargetType="Frame">
+            <Setter Property="Padding" Value="5,2" />
+            <Setter Property="BackgroundColor" Value="#30000000" />
+            <Setter Property="BorderColor" Value="Red" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+            <Setter Property="HasShadow" Value="False" />
+        </Style>
+
+        <Style x:Key="OpponentCardBase" TargetType="Rectangle">
+            <Setter Property="WidthRequest" Value="45" />
+            <Setter Property="HeightRequest" Value="70" />
+            <Setter Property="RadiusX" Value="5" />
+            <Setter Property="RadiusY" Value="5" />
+            <Setter Property="StrokeThickness" Value="2" />
+            <Setter Property="Fill" Value="#8B0000" />
+            <Setter Property="Stroke" Value="#550000" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+
+        <Style x:Key="MyCardStyle" TargetType="Frame">
+            <Setter Property="WidthRequest" Value="75" />
+            <Setter Property="HeightRequest" Value="115" />
+            <Setter Property="BackgroundColor" Value="White" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="HasShadow" Value="True" />
+            <Setter Property="BorderColor" Value="Gray" />
+        </Style>
+
+        <DataTemplate x:Key="CardTemplate">
+            <Frame Style="{StaticResource MyCardStyle}" BorderColor="Gold" BackgroundColor="#F0F0F0">
+                <Grid RowDefinitions="Auto, *, Auto">
+                    <Label Text="{Binding Cost, StringFormat='Cost: {0}'}" 
+                           TextColor="DarkGoldenrod" FontAttributes="Bold" FontSize="10" Margin="2,0"/>
+                    <VerticalStackLayout Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center">
+                        <Label Text="{Binding Name}" TextColor="Black" 
+                               HorizontalTextAlignment="Center" FontSize="11" FontAttributes="Bold" />
+                    </VerticalStackLayout>
+                    <Label Grid.Row="2" Text="{Binding Initiative}" TextColor="Blue" 
+                           HorizontalOptions="End" FontSize="10" Margin="2"/>
+                </Grid>
+            </Frame>
+        </DataTemplate>
+    </ContentPage.Resources>
+
+    <Grid RowDefinitions="Auto, *, Auto" 
+          ColumnDefinitions="120, *, 120" 
+          Padding="10">
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" Spacing="5">
+            <Label Text="KRUTA" FontSize="40" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
+            <Label Text="{Binding GameStatus}" FontSize="18" TextColor="Yellow" FontAttributes="Bold" HorizontalOptions="Center" />
+
+            <Grid ColumnDefinitions="80, *" HorizontalOptions="Center" WidthRequest="550" HeightRequest="160">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="5">
+                    <Frame BackgroundColor="#2C3E50" BorderColor="Goldenrod" CornerRadius="5" WidthRequest="60" HeightRequest="90" Padding="0">
+                        <Label Text="DECK" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold" Rotation="-45"/>
+                    </Frame>
+                    <Label Text="{Binding DeckRemainingCount, StringFormat='Карт: {0}'}" TextColor="Yellow" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12"/>
+                </VerticalStackLayout>
+
+                <CollectionView Grid.Column="1" 
+                                ItemsSource="{Binding BaraholkaCards}" 
+                                ItemTemplate="{StaticResource CardTemplate}"
+                                HorizontalScrollBarVisibility="Never"
+                                VerticalScrollBarVisibility="Never">
+                    <CollectionView.ItemsLayout>
+                        <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
+                    </CollectionView.ItemsLayout>
+                </CollectionView>
+            </Grid>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="0" Grid.Column="1" BindingContext="{Binding Opponents[0]}" VerticalOptions="Start" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+            <HorizontalStackLayout Spacing="-30" HorizontalOptions="Center">
+                <Rectangle Style="{StaticResource OpponentCardBase}" />
+                <Rectangle Style="{StaticResource OpponentCardBase}" />
+                <Rectangle Style="{StaticResource OpponentCardBase}" />
+            </HorizontalStackLayout>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="0" BindingContext="{Binding Opponents[1]}" VerticalOptions="Center" Rotation="90" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="2" BindingContext="{Binding Opponents[2]}" VerticalOptions="Center" Rotation="-90" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="5">
+            <Button Text="ЗАВЕРШИТЬ ХОД"
+                    Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EndTurnCommand}"
+                    IsVisible="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}"
+                    BackgroundColor="Gold" 
+                    TextColor="Black" 
+                    FontAttributes="Bold"
+                    WidthRequest="220" 
+                    HeightRequest="50" 
+                    CornerRadius="25" 
+                    HorizontalOptions="Center"
+                    ZIndex="100">
+                <Button.Shadow>
+                    <Shadow Brush="Black" Offset="2,2" Radius="5" Opacity="0.5" />
+                </Button.Shadow>
+            </Button>
+
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="15" Margin="0,5">
+                <Label Text="ВАШИ КАРТЫ" TextColor="White" FontAttributes="Bold" VerticalOptions="Center"/>
+                <Frame BorderColor="Lime" BackgroundColor="#2000FF00" Padding="10,2" HasShadow="False">
+                    <Label Text="{Binding MyHealth, StringFormat='{0} HP'}" TextColor="Lime" FontAttributes="Bold" FontSize="16"/>
+                </Frame>
+            </HorizontalStackLayout>
+
+            <CollectionView ItemsSource="{Binding MyHandCards}" 
+                            ItemTemplate="{StaticResource CardTemplate}" 
+                            HeightRequest="125"
+                            VerticalOptions="End"
+                            HorizontalScrollBarVisibility="Never">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
+                </CollectionView.ItemsLayout>
+            </CollectionView>
+        </VerticalStackLayout>
+    </Grid>
+</ContentPage>

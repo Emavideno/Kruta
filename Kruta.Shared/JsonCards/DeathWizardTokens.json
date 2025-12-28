@@ -1,0 +1,83 @@
+﻿[
+  //жетоны дохлых колдунов
+  {
+    "id": "TKN_01",
+    "title": "Вялая неудача",
+    "description": "Получи вялую палочку.",
+    "logic": {
+      "action_type": "Receive_Card",
+      "card_id": "LIMP_WAND",
+      "amount": 1
+    }
+  },
+  {
+    "id": "TKN_02",
+    "title": "Подарок из сброса",
+    "description": "Каждый враг может переложить 1 карту из своего сброса в твой.",
+    "logic": {
+      "action_type": "Move_Card_Between_Discards",
+      "source": "Enemies",
+      "target": "Self",
+      "amount": 1,
+      "is_optional": true
+    }
+  },
+  {
+    "id": "TKN_03",
+    "title": "Щедрый жест",
+    "description": "Раскрой верхнюю карту своей колоды и передай её на руку выбранному врагу.",
+    "logic": {
+      "action_type": "Reveal_And_Transfer",
+      "source": "Top_Of_Deck",
+      "target": "Chosen_Enemy",
+      "destination": "Hand"
+    }
+  },
+  {
+    "id": "TKN_04",
+    "title": "Живучий колдун",
+    "description": "После этой смерти ты воскресаешь с 11 жизнями.",
+    "logic": {
+      "action_type": "Override_Respawn_Health",
+      "health_value": 11
+    }
+  },
+  {
+    "id": "TKN_05",
+    "title": "Месть из могилы",
+    "description": "Нанеси 8 урона убившему тебя колдуну.",
+    "logic": {
+      "action_type": "Damage_Killer",
+      "amount": 8
+    }
+  },
+  {
+    "id": "TKN_06",
+    "title": "Предсмертный испуг",
+    "description": "Уничтожь случайную карту у себя на руке.",
+    "logic": {
+      "action_type": "Destroy_Random_Card",
+      "target": "Self",
+      "source": "Hand"
+    }
+  },
+  {
+    "id": "TKN_07",
+    "title": "Гнев Легенды",
+    "description": "Примените против себя свойство «Групповая атака» текущей карты легенды.",
+    "logic": {
+      "action_type": "Trigger_Legend_Group_Attack",
+      "target": "Self"
+    }
+  },
+  {
+    "id": "TKN_08",
+    "title": "Двойная неудача",
+    "description": "Получи 2 вялые палочки.",
+    "logic": {
+      "action_type": "Receive_Card",
+      "card_id": "LIMP_WAND",
+      "amount": 2
+    }
+  }
+]

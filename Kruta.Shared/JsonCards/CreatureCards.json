@@ -1,0 +1,293 @@
+﻿[ // Твари
+  // 1. НЕКРОСТРИПТИЗЁРШИ
+  {
+    "id": "MON_01",
+    "title": "Некростриптизёрши",
+    "card_type": "Тварь",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Power_Mod_Per_Token",
+        "amount": 1,
+        "token_type": "Long_Cold_Card_Token"
+      }
+    ]
+  },
+
+  // 2. КРОВАВЫЙ БАНЩИК
+  {
+    "id": "MON_02",
+    "title": "Кровавый Банщик",
+    "card_type": "Тварь",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_All_Cards_On_Hand_And_Damage_By_Most_Expensive",
+        "target_type": "Selected_Enemy"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 3. ТАЛИСМАНЫ ВЕЗУНЧИКА
+  {
+    "id": "MON_03",
+    "title": "Талисманы Везунчика",
+    "card_type": "Тварь",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_From_Discard_Pile_Conditional",
+        "source": "Discard_Pile",
+        "amount": 1,
+        "condition": "If_No_Treasure_In_Discard",
+        "bonus_power": 2
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 4. ДВОЙНЯШКИ
+  {
+    "id": "MON_04",
+    "title": "Двойняшки",
+    "card_type": "Тварь",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "amount": 2
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 5. РЫЦАРЬ-СОПЛЕНОСЕЦ
+  {
+    "id": "MON_05",
+    "title": "Рыцарь-Сопленосец",
+    "card_type": "Тварь",
+    "cost": 2,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 6. КРЫСЫ-СКЕЙТЕРЫ С МАРСА
+  {
+    "id": "MON_06",
+    "title": "Крысы-Скейтеры с Марса",
+    "card_type": "Тварь",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_To_Prevent_Attack",
+        "trigger": "On_Attacked",
+        "payload": {
+          "destination": "Discard_Pile",
+          "source": "Hand_Or_Discard_Pile"
+        }
+      }
+    ]
+  },
+
+  // 7. ФРУКТОВЫЙ ЗАД
+  {
+    "id": "MON_07",
+    "title": "Фруктовый Зад",
+    "card_type": "Тварь",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Apply_Buff_To_All_Enemies",
+        "buff_type": "Vulnerable",
+        "duration": "Until_End_Of_Turn"
+      },
+      {
+        "step": 2,
+        "effect": "Heal_Life_Conditional",
+        "amount": 4,
+        "condition": "If_Enemy_Avoids_Attack"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 8. УТОРИЛЛА
+  {
+    "id": "MON_08",
+    "title": "Уторилла",
+    "card_type": "Тварь",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_To_Prevent_Attack_And_Destroy_Card",
+        "trigger": "On_Attacked",
+        "payload": {
+          "source": "Hand_Or_Discard_Pile",
+          "target": "Any_Card_On_Hand"
+        }
+      }
+    ]
+  },
+
+  // 9. КТУЛХУ
+  {
+    "id": "MON_09",
+    "title": "Ктулху",
+    "card_type": "Тварь",
+    "cost": 7,
+    "power_gems": 3,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target_Filtered",
+        "target_type": "All_Enemies",
+        "damage": "Discarded_Card_Cost",
+        "filter": "Random_Card_From_Own_Deck"
+      }
+    ],
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Control_Token",
+        "token_type": "R'lyeh_Control_Token"
+      }
+    ]
+  },
+
+  // 10. ГЕНИТАЛЬНЫЕ ГАРПИИ
+  {
+    "id": "MON_10",
+    "title": "Генитальные Гарпии",
+    "card_type": "Тварь",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_All_Enemies_Conditional",
+        "damage": 2,
+        "condition": "For_Each_Vulva_Token",
+        "payload": {
+          "source": "Own_Field",
+          "token_type": "Vulva_Token"
+        }
+      },
+      {
+        "step": 2,
+        "effect": "Draw_Card_Conditional",
+        "amount": 1,
+        "condition": "If_Attack_Failed"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 11. КИСЛОТНЫЙ ДРАКОН
+  {
+    "id": "MON_11",
+    "title": "Кислотный Дракон",
+    "card_type": "Тварь",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "on_play_trigger": [
+      {
+        "step": 1,
+        "effect": "Inspect_Top_Card_And_Destroy_Or_Return",
+        "source": "Own_Deck",
+        "action": "Destroy_Or_Return_To_Top"
+      }
+    ]
+  },
+
+  // 12. ФАТАЛИЗАТОР
+  {
+    "id": "MON_12",
+    "title": "Фатализатор",
+    "card_type": "Тварь",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Single_Enemy_With_Conditional_Draw",
+        "target_type": "Strongest_Enemy",
+        "damage": 4,
+        "payload": {
+          "draw_amount": 2,
+          "card_filter": "Dead_Cold_Card",
+          "choice_required": true
+        }
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 13. ЧЕГОЙ-ТО
+  {
+    "id": "MON_13",
+    "title": "Чегой-то",
+    "card_type": "Тварь",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_All_Enemies_Conditional",
+        "damage": 3,
+        "condition": "For_Each_Permanent_On_Field",
+        "payload": {
+          "source": "Own_Field",
+          "token_type": "Permanent_Token"
+        }
+      }
+    ],
+    "defense_logic": null
+  }
+]

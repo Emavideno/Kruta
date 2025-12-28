@@ -1,0 +1,289 @@
+﻿[// Сокровища
+  // 1. ОРУДИЯ РЭП-БИТВЫ
+{
+  "id": "TREASURE_01",
+  "title": "Орудия Рэп-Битвы",
+  "card_type": "Сокровище",
+  "cost": 5,
+  "power_gems": 1,
+  "power_mod": 2,
+  "entry_effect_logic": null,
+  "attack_logic": [
+    {
+      "step": 1,
+      "effect": "Damage_All_Enemies_Conditional",
+      "damage": 4,
+      "condition": "For_Each_Legendary_In_Opponent_Discard"
+    },
+    {
+      "step": 2,
+      "effect": "Destroy_Card_From_Hand_On_Fail",
+      "target_type": "Any_Card_On_Hand",
+      "condition": "If_Attack_Failed"
+    }
+  ],
+  "defense_logic": null
+},
+
+  // 2. БОЛЬШОЙ КОСТЕЦ
+  {
+    "id": "TREASURE_02",
+    "title": "Большой Костец",
+    "card_type": "Сокровище",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Gain_Victory_Points_Per_Token",
+        "amount": 1,
+        "token_type": "Death_Cold_Token",
+        "condition": "Until_Score_Starts"
+      }
+    ]
+  },
+
+  // 3. ДРАКОНЫ ЯЙЦА
+  {
+    "id": "TREASURE_03",
+    "title": "Драконы Яйца",
+    "card_type": "Сокровище",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Heal_Life",
+        "amount": 3
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_To_Prevent_Attack",
+        "trigger": "On_Attacked",
+        "payload": {
+          "source": "Hand_Or_Discard_Pile"
+        }
+      },
+      {
+        "step": 2,
+        "effect": "Draw_Card_Conditional",
+        "amount": 1,
+        "condition": "If_Has_Two_Dragon_Eggs"
+      }
+    ]
+  },
+
+  // 4. ЯЗЫК РОБОТОВ
+  {
+    "id": "TREASURE_04",
+    "title": "Язык Роботов",
+    "card_type": "Сокровище",
+    "cost": 2,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_To_Prevent_Attack_And_Destroy_Card",
+        "trigger": "On_Attacked",
+        "payload": {
+          "source": "Hand_Or_Discard_Pile",
+          "target": "Any_Card_On_Hand_Or_Discard_Pile"
+        }
+      }
+    ]
+  },
+
+  // 5. ЖЕЗЛ СВИНСТВА
+  {
+    "id": "TREASURE_05",
+    "title": "Жезл Свинства",
+    "card_type": "Сокровище",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "amount": 1
+      }
+    ],
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Give_Card_To_Enemy",
+        "source": "Hand_Or_Discard_Pile",
+        "card_filter": "Cost_0",
+        "target_type": "Selected_Enemy"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 6. БОЕВАЯ САКСЕКИРА
+  {
+    "id": "TREASURE_06",
+    "title": "Боевая Саксекира",
+    "card_type": "Сокровище",
+    "cost": 5,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target",
+        "target_type": "Leftmost_And_Rightmost_Enemy",
+        "damage": 5
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 7. ПОЛНОЕ ДЕРЬМО
+  {
+    "id": "TREASURE_07",
+    "title": "Полное Дерьмо",
+    "card_type": "Сокровище",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 2,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Top_Card_Own_Deck_And_Discard_Conditional",
+        "action": "Discard_Any_Card_From_Top"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 8. ПОСОХ ГОВНАРЯ
+  {
+    "id": "TREASURE_08",
+    "title": "Посох Говнаря",
+    "card_type": "Сокровище",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 1,
+    "entry_effect_logic": null,
+    "attack_logic": [
+      {
+        "step": 1,
+        "effect": "Damage_Target_And_Apply_Buff",
+        "target_type": "Selected_Enemy",
+        "damage": 3,
+        "buff_type": "Vulnerable"
+      }
+    ],
+    "defense_logic": null
+  },
+
+  // 9. ЗОЛОТАЯ НЕМОЛОДЁЖЬ
+  {
+    "id": "TREASURE_09",
+    "title": "Золотая Немолодёжь",
+    "card_type": "Сокровище",
+    "cost": 3,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null,
+    "passive_logic": [
+      {
+        "effect": "Heal_Life_Per_Location",
+        "amount": 1,
+        "trigger": "Start_Of_Turn"
+      }
+    ]
+  },
+
+  // 10. СЕКСКАЛИБУР
+  {
+    "id": "TREASURE_10",
+    "title": "Секскалибур",
+    "card_type": "Сокровище",
+    "cost": 4,
+    "power_gems": 1,
+    "power_mod": 0,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_From_Discard_Pile_Conditional",
+        "source": "Discard_Pile",
+        "amount": 1,
+        "condition": "If_No_Wizard_In_Discard",
+        "bonus_power": 2
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 11. СУМКА РАДОСТИ
+  {
+    "id": "TREASURE_11",
+    "title": "Сумка Радости",
+    "card_type": "Сокровище",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 3,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Top_Card_Own_Deck_And_Heal_By_Cost",
+        "source": "Own_Deck"
+      }
+    ],
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 12. ЛАВРЫ ДЯДЮШКИ ЭНДИ
+  {
+    "id": "TREASURE_12",
+    "title": "Лавры Дядюшки Энди",
+    "card_type": "Сокровище",
+    "cost": 7,
+    "power_gems": 2,
+    "power_mod": 5,
+    "entry_effect_logic": null,
+    "attack_logic": null,
+    "defense_logic": null
+  },
+
+  // 13. НЕЧЕСТИВЫЙ ГРААЛЬ
+{
+  "id": "TREASURE_13",
+  "title": "Нечестивый Грааль",
+  "card_type": "Сокровище",
+  "cost": 6,
+  "power_gems": 2,
+  "power_mod": 3,
+  "entry_effect_logic": null,
+  "attack_logic": null,
+  "defense_logic": [
+    {
+      "step": 1,
+      "effect": "Discard_Card_To_Prevent_Attack_And_Damage",
+      "trigger": "On_Attacked",
+      "payload": {
+        "source": "Hand_Or_Discard_Pile",
+        "damage": 5
+      }
+    }
+  ]
+}
+]

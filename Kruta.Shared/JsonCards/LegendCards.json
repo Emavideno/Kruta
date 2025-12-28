@@ -1,0 +1,186 @@
+[
+  // --- ТИП: ЛЕГЕНДА ---
+
+  // 1. КРОВОМАНТ ЛЮТОНАРК
+  {
+    "id": "LEG_01",
+    "title": "Кровомант Лютонарк",
+    "card_type": "Легенда",
+    "default_power": 9,
+    "trophy_value": 5,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "target_type": "Current_Legend_Player",
+        "amount": 3
+      },
+      {
+        "step": 2,
+        "effect": "Damage_Self",
+        "target_type": "Current_Legend_Player",
+        "amount": 3
+      }
+    ],
+    "group_attack_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Card_To_Enemy_Discard",
+        "target_type": "All_Players",
+        "payload": {
+          "card_selection": "Any_Card",
+          "target_discard": "Left_Enemy",
+          "store_cost_multiplier": 2 // Запомнить удвоенную стоимость
+        }
+      },
+      {
+        "step": 2,
+        "effect": "Damage_Target_By_Stored_Value",
+        "target_type": "Left_Enemy",
+        "source_value": "Last_Discarded_Card_Cost_Multiplied"
+      }
+    ]
+  },
+
+  // 2. ДВОЙНОЙ ОТЛИЗУН, ДЕМОНИЧЕСКИЙ КОЛДУН
+  {
+    "id": "LEG_02",
+    "title": "Двойной Отлизун, Демонический Колдун",
+    "card_type": "Легенда",
+    "default_power": 9,
+    "trophy_value": 5,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_Card_To_Deck",
+        "deck_source": "Main_Deck",
+        "deck_target": "Top_Of_Current_Player_Deck"
+      },
+      {
+        "step": 2,
+        "effect": "Power_Buff",
+        "target_type": "Current_Legend_Player",
+        "amount": 3,
+        "condition": "If_Revealed_Card_Is_Bespredel"
+      }
+    ],
+    "group_attack_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_And_Discard_Conditional",
+        "target_type": "All_Players",
+        "amount": 5,
+        "deck_source": "Top_Of_Deck",
+        "discard_condition": "Cost_Is_One_Or_Less"
+      }
+    ]
+  },
+
+  // 3. ЗНАК КОСМОСА
+  {
+    "id": "LEG_03",
+    "title": "Знак Космоса",
+    "card_type": "Легенда",
+    "default_power": 10,
+    "trophy_value": 1,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Play_Random_Bespredel_From_Destroyed_Pile",
+        "optional": true,
+        "target_type": "All_Players"
+      }
+    ],
+    "group_attack_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_And_Steal_Permanent",
+        "target_type": "All_Players",
+        "discard_amount": 2,
+        "steal_type": "Permanent_Card",
+        "payload": {
+          "target_owner": "Player_Self"
+        }
+      }
+    ]
+  },
+
+  // 4. КОНСТАНТИН, ПОВЕЛИТЕЛЬ ТЬМЫ
+  {
+    "id": "LEG_04",
+    "title": "Константин, Повелитель Тьмы",
+    "card_type": "Легенда",
+    "default_power": 10,
+    "trophy_value": 5,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Grant_Token",
+        "target_type": "Current_Legend_Player",
+        "token_type": "Random_Wizard_Property_Token"
+      },
+      {
+        "step": 2,
+        "effect": "Change_Next_Legend",
+        "next_legend_id": "Current_Legend_Card_Box"
+      }
+    ],
+    "group_attack_logic": [
+      {
+        "step": 1,
+        "effect": "Compare_Life_Change_To_Lowest_Player",
+        "target_type": "All_Players",
+        "comparison_target": "Lowest_Life_Player"
+      }
+    ]
+  },
+
+  // 5. ДОКТОР ВЫПИЛ
+  {
+    "id": "LEG_05",
+    "title": "Доктор Выпил",
+    "card_type": "Легенда",
+    "default_power": 12,
+    "trophy_value": 6,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Double_Power_For_This_Turn",
+        "target_type": "Current_Legend_Player"
+      }
+    ],
+    "group_attack_logic": [
+      {
+        "step": 1,
+        "effect": "Discard_Conditional_Cost",
+        "target_type": "All_Players",
+        "condition": "Cost_Is_Five_Or_More"
+      }
+    ]
+  },
+
+  // 6. ОДНОРУКИЙ ОДНОГЛАЗЫЙ ОДНОМУМ
+  {
+    "id": "LEG_06",
+    "title": "Однорукий Одноглазый Одномум",
+    "card_type": "Легенда",
+    "default_power": 8,
+    "trophy_value": 4,
+    "entry_effect_logic": [
+      {
+        "step": 1,
+        "effect": "Draw_Cards",
+        "target_type": "Current_Legend_Player",
+        "amount": 1
+      },
+      {
+        "step": 2,
+        "effect": "Damage_All_Enemies_Not_Attack",
+        "damage": 1
+      }
+    ],
+    "group_attack_logic": [
+      // Групповая атака не указана на карте
+    ]
+  }
+]

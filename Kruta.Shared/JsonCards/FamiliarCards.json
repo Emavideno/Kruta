@@ -1,0 +1,276 @@
+[
+
+  // --- ТИП: ФАМИЛЬЯР (Общая Защита) ---
+  // Защита: можешь сбросить эту карту, чтобы избежать атаки. Если сбросил, возьми 1 карту и перенаправь эффект атаки против атакующего.
+
+  // Общая логика защиты, которая используется всеми Фамильярами:
+  {
+    "id": "DEF_FAM",
+    "effect": "Prevent_Attack_And_Counter",
+    "trigger_event": "On_Attacked",
+    "condition": "Familiar_Discarded",
+    "action_list": [
+      {
+        "effect": "Prevent_Damage_And_Effects",
+        "target_type": "Player_Self"
+      },
+      {
+        "effect": "Draw_Cards",
+        "target_type": "Player_Self",
+        "amount": 1
+      },
+      {
+        "effect": "Redirect_Attack_Effect",
+        "target_source": "Attacker",
+        "new_target": "Attacker"
+      }
+    ]
+  },
+
+  // 1. ЛОБКОВОЕ ОТРОДЬЕ (FAM_01)
+  {
+    "id": "FAM_01",
+    "title": "Лобковое Отродье",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Attack_Immediate",
+        "target_type": "Selected_Enemy",
+        "damage": 7
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 2. УГОРЕЛЫЙ ОРУЖЕНОСЕЦ (FAM_02)
+  {
+    "id": "FAM_02",
+    "title": "Угорелый Оруженосец",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Reveal_And_Modify_Deck",
+        "deck_source": "Top_Of_Deck",
+        "amount": 2,
+        "payload": {
+          "optional_action": "Destroy_One",
+          "keep_one_on_top": true
+        }
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 3. СЭР СОЛЛЕЙН БЛАГОСЛОВЕННЫЙ (FAM_03)
+  {
+    "id": "FAM_03",
+    "title": "Сэр Соллейн Благословенный",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Heal_Life",
+        "amount": 6
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 4. МАЖЛИВЕР, ЖГУЧИЙ ПОТРОШОК (FAM_04)
+  {
+    "id": "FAM_04",
+    "title": "Мажливер, Жгучий Потрошок",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Destroy_Cards_From_Enemy_Discard",
+        "target_type": "Selected_Enemy",
+        "amount": 2
+      },
+      {
+        "step": 2,
+        "effect": "Transfer_Token",
+        "token_type": "Random_Property_Token",
+        "source": "Enemy_Tokens",
+        "target": "Player_Self"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 5. ЙАЛ МАРКС (FAM_05)
+  {
+    "id": "FAM_05",
+    "title": "Йал Маркс",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 3,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Destroy_Cards_From_Market_Conditional",
+        "destroy_limit": 1,
+        "condition": "Destroy_One_From_Hand"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 6. ЛОРД МЫШКИНСОН ИЗ СЫРФОЛКА (FAM_06)
+  {
+    "id": "FAM_06",
+    "title": "Лорд Мышкинсон из Сырфолка (Промо)",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Transfer_Permanent",
+        "target_type": "Selected_Enemy",
+        "card_type_filter": "Permanent_Card",
+        "target_transfer": "Player_Self"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 7. ПЫХ, РАДУЖНОЕ ОБЛАЧКО (FAM_07)
+  {
+    "id": "FAM_07",
+    "title": "Пых, Радужное Облачко (Промо)",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Receive_Limp_Wand",
+        "target_type": "Player_Self",
+        "amount": 1
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 8. АСМОДЕЙ, ДЕМОН В ВЕЧЕРИНОК (FAM_08)
+  {
+    "id": "FAM_08",
+    "title": "Асмодей, Демон в Вечеринок (Промо)",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Receive_Random_Token_Conditional",
+        "target_type": "Selected_Enemy",
+        "token_type": "Any_Token",
+        "condition": "Player_Has_Token_Under_Control"
+      },
+      {
+        "step": 2,
+        "effect": "Damage_Self",
+        "amount": 4
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 9. МОНЕТОЧКА (FAM_09)
+  {
+    "id": "FAM_09",
+    "title": "Моне.точка",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 3,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Power_Buff_Conditional",
+        "amount": 3,
+        "condition": "If_Discard_Has_Treasure_3_Plus"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 10. ШКОЛОТА! (FAM_10)
+  {
+    "id": "FAM_10",
+    "title": "Школота!",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 2,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Place_Card_Under_Owner_Deck",
+        "target_type": "All_Players",
+        "card_filter": "Any_Card",
+        "deck_target": "Bottom_Of_Deck",
+        "trigger_event": "On_Discard_Phase"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 11. ВЕДУЩИЙ ОРГАН(ИЗАТОР) (FAM_11)
+  {
+    "id": "FAM_11",
+    "title": "Ведущий Орган(изатор)",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 1,
+    "power_mod": 2,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Play_Random_Bespredel_From_Destroyed_Pile",
+        "amount": 2,
+        "optional_play": 1
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  },
+
+  // 12. ЕЛДУН-КОЛДУН (FAM_12)
+  {
+    "id": "FAM_12",
+    "title": "Елдун-Колдун",
+    "card_type": "Фамильяр",
+    "cost": 6,
+    "power_gems": 3,
+    "power_mod": 3,
+    "passive_logic": [
+      {
+        "step": 1,
+        "effect": "Power_Buff_Conditional",
+        "amount": 3,
+        "condition": "If_Discard_Has_Spell_3_Plus"
+      }
+    ],
+    "defense_logic_ref": "DEF_FAM"
+  }
+]
