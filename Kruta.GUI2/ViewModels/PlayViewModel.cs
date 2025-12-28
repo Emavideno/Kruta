@@ -70,8 +70,6 @@ namespace Kruta.GUI2.ViewModels
             _networkService.OnPacketReceived += HandlePacketWrapper;
 
             _networkService.SendPacket(EAPacket.Create(2, 0));
-
-            // Тестовая карта удалена для чистоты, сервер пришлет актуальные
         }
 
         private void HandlePacketWrapper(EAPacket p)
@@ -127,25 +125,42 @@ namespace Kruta.GUI2.ViewModels
                 }
             }
 
-            // Тип 4, Подтип 1: Инициализация игры
+            // Тип 4, Подтип 1: Обновление состояния игры (GameStateUpdate)
             if (p.PacketType == 4 && p.PacketSubtype == 1)
             {
                 if (p.HasField(5)) _myPlayerIdInServer = BitConverter.ToInt32(p.GetValueRaw(5), 0);
 
+                // Обновление Барахолки
                 if (p.HasField(6))
                 {
                     var baraholkaRaw = p.GetValueRaw(6);
                     BaraholkaCards.Clear();
                     for (int i = 0; i < baraholkaRaw.Length; i += 4)
-                        BaraholkaCards.Add(CreateCardById(BitConverter.ToInt32(baraholkaRaw, i)));
+                    {
+                        int id = BitConverter.ToInt32(baraholkaRaw, i);
+                        if (id > 0) BaraholkaCards.Add(CreateCardById(id));
+                    }
                 }
 
+                // --- ИСПРАВЛЕННОЕ ОБНОВЛЕНИЕ РУКИ ---
                 if (p.HasField(7))
                 {
                     var handRaw = p.GetValueRaw(7);
-                    MyHandCards.Clear();
+                    var serverCardIds = new List<int>();
                     for (int i = 0; i < handRaw.Length; i += 4)
-                        MyHandCards.Add(CreateCardById(BitConverter.ToInt32(handRaw, i)));
+                    {
+                        int cardId = BitConverter.ToInt32(handRaw, i);
+                        if (cardId > 0) serverCardIds.Add(cardId);
+                    }
+
+                    // Полная синхронизация: очищаем и добавляем всё, что прислал сервер
+                    // Это гарантирует, что купленная карта появится, а старые не пропадут
+                    MyHandCards.Clear();
+                    foreach (var id in serverCardIds)
+                    {
+                        MyHandCards.Add(CreateCardById(id));
+                    }
+                    System.Diagnostics.Debug.WriteLine($"[DEBUG] Рука синхронизирована. Карт: {MyHandCards.Count}");
                 }
 
                 if (p.HasField(8))
@@ -174,7 +189,7 @@ namespace Kruta.GUI2.ViewModels
                 }
             }
 
-            // --- НОВОЕ: Тип 5, Подтип 3: Уведомление о розыгрыше карты ---
+            // Тип 5, Подтип 3: Сообщения от сервера (Лог боя)
             if (p.PacketType == 5 && p.PacketSubtype == 3)
             {
                 if (p.HasField(4))
@@ -200,7 +215,6 @@ namespace Kruta.GUI2.ViewModels
 
         private async void ShowTemporaryStatus(string message)
         {
-            // Отменяем предыдущий таймер, если он был запущен
             _statusTimerTokenSource?.Cancel();
             _statusTimerTokenSource = new CancellationTokenSource();
             var token = _statusTimerTokenSource.Token;
@@ -209,16 +223,10 @@ namespace Kruta.GUI2.ViewModels
 
             try
             {
-                // Ждем 3 секунды
                 await Task.Delay(3000, token);
-
-                // Возвращаем стандартный статус
                 UpdateDefaultStatus();
             }
-            catch (TaskCanceledException)
-            {
-                // Игнорируем, если таймер был перебит новым сообщением
-            }
+            catch (TaskCanceledException) { }
         }
 
         private void CheckWinCondition()
@@ -325,16 +333,15 @@ namespace Kruta.GUI2.ViewModels
         [RelayCommand]
         private void BuyCard(ICardMini card)
         {
-            // Покупать можно только в свой ход и если есть достаточно мощи (если введете цену)
             if (card == null || !IsMyTurn || IsDead) return;
 
-            // Отправляем пакет покупки (Тип 5, Подтип 4)
             var packet = EAPacket.Create(5, 4);
             packet.SetValueRaw(3, BitConverter.GetBytes(card.CardId));
             _networkService.SendPacket(packet);
 
-            // Мы не добавляем карту в руку здесь сами — ждем пакет GameStateUpdate от сервера,
-            // который обновит MyHandCards и BaraholkaCards для синхронизации.
+            // Здесь мы специально ничего не удаляем и не добавляем в коллекции.
+            // Ждем пакет GameStateUpdate (Тип 4, Подтип 1), который придет от сервера
+            // и вызовет MyHandCards.Clear() + заполнит актуальным списком.
         }
     }
 

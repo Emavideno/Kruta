@@ -30,6 +30,9 @@ namespace Kruta.Server
 
         public int CurrentPlayerIndex { get; private set; } = 0;
 
+        // Словарь для отслеживания покупок за ход (Имя игрока -> Кол-во покупок)
+        private Dictionary<string, int> _buysCounter = new Dictionary<string, int>();
+
         private readonly Dictionary<EAPacketType, IPacketHandler> _handlers;
 
         public GameServer2()
@@ -133,6 +136,10 @@ namespace Kruta.Server
         public async Task StartFirstTurnAsync()
         {
             Console.WriteLine("[SERVER] Подготовка к первому ходу...");
+            
+            // Инициализация колоды и рук игроков
+            InitializeGameData();
+
             await Task.Delay(2000);
             lock (Clients)
             {
@@ -140,7 +147,69 @@ namespace Kruta.Server
                 {
                     CurrentPlayerIndex = 0;
                     foreach (var c in Clients) c.PlayerData.TurnCount = 0;
+                    
+                    // Обновляем состояние (показываем пустые руки и новую барахолку)
+                    BroadcastGameState();
+                    
                     NotifyCurrentPlayer();
+                }
+            }
+        }
+
+        // Логика инициализации: все карты в колоду, руки пустые
+        private void InitializeGameData()
+        {
+            lock (Baraholka)
+            {
+                MainDeck.Clear();
+                var rand = new Random();
+
+                // 1. Собираем стартовые карты всех игроков в общую колоду
+                foreach (var client in Clients)
+                {
+                    client.PlayerData.Hand.Clear(); // Сначала очищаем
+
+                    // Добавляем стартовый набор (7 "Пшик" и 3 "Хилая палочка")
+                    for (int i = 0; i < 7; i++) MainDeck.Add(3);
+                    for (int i = 0; i < 3; i++) MainDeck.Add(1);
+                }
+
+                // 2. Добавляем карты магазина в колоду
+                int[] shopCards = { 2, 4, 5, 6, 7, 8, 9, 10 };
+                foreach (var id in shopCards)
+                {
+                    for (int k = 0; k < 5; k++) MainDeck.Add(id);
+                }
+
+                // 3. Перемешиваем колоду
+                MainDeck = MainDeck.OrderBy(x => Guid.NewGuid()).ToList();
+
+                // --- НОВАЯ ЛОГИКА: Раздаем по 3 карты каждому игроку ---
+                foreach (var client in Clients)
+                {
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (MainDeck.Count > 0)
+                        {
+                            int cardId = MainDeck[0];
+                            client.PlayerData.Hand.Add(new ServerCard { Id = cardId });
+                            MainDeck.RemoveAt(0);
+                        }
+                    }
+                }
+
+                // 4. Заполняем Барахолку из оставшейся колоды
+                for (int i = 0; i < Baraholka.Length; i++)
+                {
+                    if (MainDeck.Count > 0)
+                    {
+                        Baraholka[i] = MainDeck[0];
+                        MainDeck.RemoveAt(0);
+                    }
+                    else
+                    {
+                        Baraholka[i] = 0;
+                    }
                 }
             }
         }
@@ -153,6 +222,12 @@ namespace Kruta.Server
                 var activeClient = Clients[CurrentPlayerIndex];
                 activeClient.PlayerData.TurnCount++;
                 activeClient.PlayerData.Power = activeClient.PlayerData.TurnCount;
+
+                // СБРОС СЧЕТЧИКА ПОКУПОК НА НОВЫЙ ХОД
+                if (!_buysCounter.ContainsKey(activeClient.Username))
+                    _buysCounter[activeClient.Username] = 0;
+                else
+                    _buysCounter[activeClient.Username] = 0;
 
                 var turnPacket = EAPacket.Create(5, 1);
                 turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
@@ -207,11 +282,29 @@ namespace Kruta.Server
 
         public void ProcessBuyCard(ClientObject player, int cardId)
         {
+            // ПРОВЕРКА ЛИМИТА ПОКУПОК (МАКСИМУМ 2)
+            if (_buysCounter.TryGetValue(player.Username, out int count) && count >= 2)
+            {
+                // Отправляем сообщение об ошибке только этому игроку
+                var errorPacket = EAPacket.Create(5, 3);
+                string msg = "Лимит покупок: макс 2 карты за ход!";
+                errorPacket.SetValueRaw(4, Encoding.UTF8.GetBytes(msg));
+                player.Send(errorPacket);
+                return;
+            }
+
             lock (Baraholka)
             {
                 int index = Array.IndexOf(Baraholka, cardId);
                 if (index == -1) return;
 
+                // 1. Добавляем карту в список руки на сервере
+                player.PlayerData.Hand.Add(new ServerCard { Id = cardId });
+
+                // 2. Увеличиваем счетчик покупок
+                _buysCounter[player.Username]++;
+
+                // 3. Обновляем Барахолку
                 string cardName = GetCardNameById(cardId);
                 int nextCardId = 0;
                 if (MainDeck.Count > 0)
@@ -221,11 +314,17 @@ namespace Kruta.Server
                 }
                 Baraholka[index] = nextCardId;
 
-                string message = $"Карту \"{cardName}\" купил игрок {player.Username}";
+                // 4. Уведомляем логом (можно добавить инфо, какая это по счету покупка)
+                string message = $"Карту \"{cardName}\" купил игрок {player.Username} ({_buysCounter[player.Username]}/2)";
                 var notifyPacket = EAPacket.Create(5, 3);
                 notifyPacket.SetValueRaw(4, Encoding.UTF8.GetBytes(message));
-                lock (Clients) { foreach (var c in Clients) c.Send(notifyPacket); }
 
+                lock (Clients)
+                {
+                    foreach (var c in Clients) c.Send(notifyPacket);
+                }
+
+                // 5. Рассылаем состояние игры
                 BroadcastGameState();
             }
         }
@@ -237,10 +336,27 @@ namespace Kruta.Server
                 foreach (var client in Clients)
                 {
                     var p = EAPacket.Create(4, 1);
+
+                    // Поле 6: Барахолка (общая для всех)
                     byte[] baraholkaBytes = new byte[Baraholka.Length * 4];
                     Buffer.BlockCopy(Baraholka, 0, baraholkaBytes, 0, baraholkaBytes.Length);
                     p.SetValueRaw(6, baraholkaBytes);
+
+                    // Поле 7: Карты в руке КОНКРЕТНОГО клиента
+                    var handIds = client.PlayerData.Hand
+                        .OfType<ServerCard>()
+                        .Select(c => c.Id)
+                        .Where(id => id > 0)
+                        .ToArray();
+
+                    byte[] handBytes = new byte[handIds.Length * 4];
+                    Buffer.BlockCopy(handIds, 0, handBytes, 0, handBytes.Length);
+                    p.SetValueRaw(7, handBytes);
+
+                    // Поле 8: Размер колоды
                     p.SetValueRaw(8, BitConverter.GetBytes(MainDeck.Count));
+
+                    // Отправляем пакет конкретному клиенту
                     client.Send(p);
                 }
             }
@@ -271,5 +387,10 @@ namespace Kruta.Server
                 Clients.Clear();
             }
         }
+    }
+
+    public class ServerCard : Kruta.Shared.Models.Interfaces.ICard
+    {
+        public int Id { get; set; }
     }
 }
