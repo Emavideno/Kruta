@@ -108,7 +108,7 @@
                     <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
-                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                    <DataTrigger TargetType="Button" Binding="{Binding IsDead}" Value="True">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
                     <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
@@ -133,7 +133,7 @@
                     <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
-                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                    <DataTrigger TargetType="Button" Binding="{Binding IsDead}" Value="True">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
                     <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
@@ -153,7 +153,7 @@
                     <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
-                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                    <DataTrigger TargetType="Button" Binding="{Binding IsDead}" Value="True">
                         <Setter Property="IsVisible" Value="False"/>
                     </DataTrigger>
                     <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
@@ -224,7 +224,6 @@
                         <Shadow Brush="Black" Offset="5,5" Radius="10" Opacity="0.9" />
                     </Label.Shadow>
                 </Label>
-
                 <Label Text="Вы больше не можете совершать действия" 
                        TextColor="White" 
                        FontSize="18" 
