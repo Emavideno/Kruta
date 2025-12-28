@@ -45,6 +45,18 @@
             <Setter Property="BorderColor" Value="Gray" />
         </Style>
 
+        <Style x:Key="AttackButtonStyle" TargetType="Button">
+            <Setter Property="Text" Value="АТАКА" />
+            <Setter Property="BackgroundColor" Value="#8B0000" />
+            <Setter Property="TextColor" Value="White" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="HeightRequest" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Command" Value="{Binding Source={x:Reference ThisPage}, Path=BindingContext.AttackOpponentCommand}" />
+            <Setter Property="CommandParameter" Value="{Binding Name}" />
+        </Style>
+
         <DataTemplate x:Key="CardTemplate">
             <Frame Style="{StaticResource MyCardStyle}" BorderColor="Gold" BackgroundColor="#F0F0F0">
                 <Grid RowDefinitions="Auto, *, Auto">
@@ -91,6 +103,21 @@
 
         <VerticalStackLayout Grid.Row="0" Grid.Column="1" BindingContext="{Binding Opponents[0]}" VerticalOptions="Start" Spacing="5">
             <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+
             <Frame Style="{StaticResource HealthBadgeStyle}">
                 <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
             </Frame>
@@ -103,6 +130,21 @@
 
         <VerticalStackLayout Grid.Row="1" Grid.Column="0" BindingContext="{Binding Opponents[1]}" VerticalOptions="Center" Rotation="90" Spacing="5">
             <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+
             <Frame Style="{StaticResource HealthBadgeStyle}">
                 <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
             </Frame>
@@ -110,6 +152,21 @@
 
         <VerticalStackLayout Grid.Row="1" Grid.Column="2" BindingContext="{Binding Opponents[2]}" VerticalOptions="Center" Rotation="-90" Spacing="5">
             <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Name}" Value="Свободно">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+
             <Frame Style="{StaticResource HealthBadgeStyle}">
                 <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
             </Frame>
@@ -144,7 +201,7 @@
                     <HorizontalStackLayout Spacing="5">
                         <Label Text="⚡" VerticalOptions="Center" TextColor="Cyan" />
                         <Label Text="{Binding MyPower, StringFormat='{0} МОЩЬ'}" 
-                                TextColor="Cyan" FontAttributes="Bold" FontSize="16"/>
+                               TextColor="Cyan" FontAttributes="Bold" FontSize="16"/>
                     </HorizontalStackLayout>
                 </Frame>
             </HorizontalStackLayout>

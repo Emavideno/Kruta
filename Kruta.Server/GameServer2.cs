@@ -49,13 +49,15 @@ namespace Kruta.Server
 
             EAPacketTypeManager.RegisterType(EAPacketType.TurnAction, 5, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.TurnStatus, 5, 1);
+            EAPacketTypeManager.RegisterType(EAPacketType.AttackAction, 5, 2);
 
             _handlers = new Dictionary<EAPacketType, IPacketHandler>
             {
                 { EAPacketType.PlayerConnected, new LoginHandler() },
                 { EAPacketType.PlayerListRequest, new PlayerListHandler() },
                 { EAPacketType.ToggleReady, new ReadyHandler() },
-                { EAPacketType.TurnAction, new TurnHandler() }
+                { EAPacketType.TurnAction, new TurnHandler() },
+                { EAPacketType.AttackAction, new TurnHandler() }
 
                 };
             }
@@ -184,14 +186,11 @@ namespace Kruta.Server
         //Изменение хп игрока
         public void BroadcastPlayerHp(ClientObject targetClient)
         {
-            // Создаем пакет (Type 3, Subtype 2)
             var hpPacket = EAPacket.Create(3, 2);
-
-            // Поле 3: Ник или ID игрока (чтобы клиенты поняли, чье HP обновилось)
             hpPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(targetClient.Username));
-
-            // Поле 4: Новое значение HP (переводим int в byte[])
             hpPacket.SetValueRaw(4, BitConverter.GetBytes(targetClient.PlayerData.Hp));
+
+            Console.WriteLine($"[SERVER_HP] Рассылка HP: {targetClient.Username} теперь имеет {targetClient.PlayerData.Hp} HP");
 
             lock (Clients)
             {
@@ -288,6 +287,65 @@ namespace Kruta.Server
                 // Уведомляем всех
                 NotifyCurrentPlayer();
                 Console.WriteLine("=== [NEXT TURN END] ===\n");
+            }
+        }
+
+        public void ProcessAttack(ClientObject attacker, string targetName)
+        {
+            lock (Clients)
+            {
+                Console.WriteLine($"\n--- [LOG ATTACK START] ---");
+                Console.WriteLine($"[DEBUG] Игрок {attacker.Username} бьет цель: '{targetName}'");
+
+                // 1. Проверка очереди
+                if (Clients.Count <= CurrentPlayerIndex || Clients[CurrentPlayerIndex].Id != attacker.Id)
+                {
+                    Console.WriteLine($"[CHEATER] Ошибка: {attacker.Username} пытался атаковать вне очереди!");
+                    return;
+                }
+
+                // 2. Проверка наличия мощи
+                if (attacker.PlayerData.Power <= 0)
+                {
+                    Console.WriteLine($"[GAME] У {attacker.Username} недостаточно мощи (Текущая: {attacker.PlayerData.Power})");
+                    return;
+                }
+
+                // 3. Поиск цели
+                var target = Clients.FirstOrDefault(c => c.Username.Trim().Equals(targetName.Trim(), StringComparison.OrdinalIgnoreCase));
+
+                if (target == null)
+                {
+                    Console.WriteLine($"[ERROR] Цель '{targetName}' не найдена!");
+                    Console.WriteLine("[DEBUG] Список доступных имен на сервере:");
+                    foreach (var c in Clients)
+                    {
+                        Console.WriteLine($"  - '{c.Username}' (ID: {c.Id})");
+                    }
+                    return;
+                }
+
+                // 4. Расчет урона
+                int damage = attacker.PlayerData.Power;
+                int oldHp = target.PlayerData.Hp;
+
+                // Применение
+                attacker.PlayerData.Power = 0;
+                target.PlayerData.Hp -= damage;
+
+                Console.WriteLine($"[SUCCESS] Попадание! {target.Username}: {oldHp} HP -> {target.PlayerData.Hp} HP. Урон: {damage}");
+
+                // 5. Рассылка HP жертвы всем
+                BroadcastPlayerHp(target);
+
+                // 6. Обнуление мощи у атакующего (отправляем ему пакет 5:1)
+                var powerUpdatePacket = EAPacket.Create(5, 1);
+                powerUpdatePacket.SetValueRaw(3, Encoding.UTF8.GetBytes(attacker.Username));
+                powerUpdatePacket.SetValueRaw(4, BitConverter.GetBytes(0));
+
+                attacker.Send(powerUpdatePacket);
+                Console.WriteLine($"[DEBUG] Мощь атакующего {attacker.Username} сброшена в 0.");
+                Console.WriteLine($"--- [LOG ATTACK END] ---\n");
             }
         }
     }

@@ -104,6 +104,42 @@ namespace Kruta.GUI2.ViewModels
                 RebuildTable();
             }
 
+            // ОБРАБОТКА ОБНОВЛЕНИЯ ХП (Тип 3, Подтип 2)
+            if (p.PacketType == 3 && p.PacketSubtype == 2)
+            {
+                if (p.HasField(3) && p.HasField(4))
+                {
+                    string targetName = Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim();
+                    int newHp = BitConverter.ToInt32(p.GetValueRaw(4), 0);
+
+                    // ЛОГ 1: Получение пакета
+                    System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] СЕРВЕР ПРИСЛАЛ ОБНОВЛЕНИЕ: Игрок={targetName}, Новое HP={newHp}");
+
+                    MainThread.BeginInvokeOnMainThread(() => {
+                        if (targetName == _networkService.PlayerName)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] Обновляю СВОЕ здоровье: {MyHealth} -> {newHp}");
+                            MyHealth = newHp;
+                        }
+                        else
+                        {
+                            var opponent = Opponents.FirstOrDefault(o => o.Name == targetName);
+                            if (opponent != null)
+                            {
+                                System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] Обновляю здоровье ОППОНЕНТА {targetName}: {opponent.Health} -> {newHp}");
+                                opponent.Health = newHp;
+                            }
+                            else
+                            {
+                                // ЛОГ 2: Если не нашли оппонента в списке UI
+                                System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] ОШИБКА: Игрок {targetName} не найден в списке Opponents!");
+                                foreach (var opt in Opponents) System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] В списке есть: '{opt.Name}'");
+                            }
+                        }
+                    });
+                }
+            }
+
             // Тип 4, Подтип 1: Данные инициализации игры (Mini модели)
             if (p.PacketType == 4 && p.PacketSubtype == 1)
             {
@@ -275,7 +311,36 @@ namespace Kruta.GUI2.ViewModels
             };
         }
 
-       
+        // Команда для атаки конкретного противника
+        [RelayCommand]
+        private void AttackOpponent(string targetName)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ATTACK_DEBUG] Попытка атаки на {targetName}. Моя мощь: {MyPower}");
+            if (!IsMyTurn) { System.Diagnostics.Debug.WriteLine("[ATTACK_DEBUG] Отмена: Не мой ход!"); return; }
+
+            // Проверки на клиенте
+            if (!IsMyTurn) return;
+            if (MyPower <= 0) return;
+            if (string.IsNullOrEmpty(targetName) || targetName == "Свободно") return;
+
+            // Оптимистичное обновление UI (сразу ставим 0, чтобы кнопка исчезла)
+            // Реальное подтверждение придет от сервера через мс
+            int dmg = MyPower;
+            MyPower = 0;
+
+            // Формируем пакет 5:2
+            var packet = EAPacket.Create(5, 2);
+            packet.SetValueRaw(3, Encoding.UTF8.GetBytes(targetName));
+
+            _networkService.SendPacket(packet);
+
+            GameStatus = $"Атака на {targetName} (-{dmg} HP)!";
+
+            System.Diagnostics.Debug.WriteLine($"[ATTACK_DEBUG] Пакет 5:2 отправлен на сервер для цели {targetName}");
+            _networkService.SendPacket(packet);
+        }
+
+
     }
 
     public partial class OpponentDisplay : ObservableObject
