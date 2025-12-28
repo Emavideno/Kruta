@@ -321,6 +321,21 @@ namespace Kruta.GUI2.ViewModels
 
             ShowTemporaryStatus($"Атака на {targetName} (-{dmg} HP)!");
         }
+
+        [RelayCommand]
+        private void BuyCard(ICardMini card)
+        {
+            // Покупать можно только в свой ход и если есть достаточно мощи (если введете цену)
+            if (card == null || !IsMyTurn || IsDead) return;
+
+            // Отправляем пакет покупки (Тип 5, Подтип 4)
+            var packet = EAPacket.Create(5, 4);
+            packet.SetValueRaw(3, BitConverter.GetBytes(card.CardId));
+            _networkService.SendPacket(packet);
+
+            // Мы не добавляем карту в руку здесь сами — ждем пакет GameStateUpdate от сервера,
+            // который обновит MyHandCards и BaraholkaCards для синхронизации.
+        }
     }
 
     public partial class OpponentDisplay : ObservableObject

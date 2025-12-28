@@ -19,8 +19,8 @@ namespace Kruta.Server
 {
     public class GameServer2
     {
-        private TcpListener _listener = new TcpListener(IPAddress.Any, 8888); // сервер для прослушивания
-        public List<ClientObject> Clients { get; private set; } = new List<ClientObject>(); // все подключения, список пользователей
+        private TcpListener _listener = new TcpListener(IPAddress.Any, 8888);
+        public List<ClientObject> Clients { get; private set; } = new List<ClientObject>();
 
         private bool _isRunning;
         private ServerSettings _settings;
@@ -30,30 +30,26 @@ namespace Kruta.Server
 
         public int CurrentPlayerIndex { get; private set; } = 0;
 
-        // Словарь: Тип пакета -> Обработчик
         private readonly Dictionary<EAPacketType, IPacketHandler> _handlers;
 
         public GameServer2()
         {
             _settings = LoadSettings();
 
-            // Существующие типы
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerConnected, 1, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerDisconnected, 1, 1);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerListRequest, 2, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerListUpdate, 2, 1);
-
-            // НОВЫЕ ТИПЫ
             EAPacketTypeManager.RegisterType(EAPacketType.ToggleReady, 3, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerReadyStatus, 3, 1);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayerHpUpdate, 3, 2);
             EAPacketTypeManager.RegisterType(EAPacketType.GameStarted, 4, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.GameStateUpdate, 4, 1);
-
             EAPacketTypeManager.RegisterType(EAPacketType.TurnAction, 5, 0);
             EAPacketTypeManager.RegisterType(EAPacketType.TurnStatus, 5, 1);
             EAPacketTypeManager.RegisterType(EAPacketType.AttackAction, 5, 2);
             EAPacketTypeManager.RegisterType(EAPacketType.PlayCardAction, 5, 3);
+            EAPacketTypeManager.RegisterType(EAPacketType.BuyCardAction, 5, 4);
 
             _handlers = new Dictionary<EAPacketType, IPacketHandler>
             {
@@ -62,7 +58,8 @@ namespace Kruta.Server
                 { EAPacketType.ToggleReady, new ReadyHandler() },
                 { EAPacketType.TurnAction, new TurnHandler() },
                 { EAPacketType.AttackAction, new TurnHandler() },
-                { EAPacketType.PlayCardAction, new TurnHandler() } // Привязываем обработку карты к TurnHandler
+                { EAPacketType.PlayCardAction, new TurnHandler() },
+                { EAPacketType.BuyCardAction, new TurnHandler() }
             };
         }
 
@@ -77,24 +74,15 @@ namespace Kruta.Server
                     return JsonSerializer.Deserialize<ServerSettings>(json) ?? new ServerSettings();
                 }
             }
-            catch (JsonException jex)
-            {
-                Console.WriteLine($"[CONFIG] Файл настроек поврежден (ошибка JSON): {jex.Message}");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[CONFIG] Ошибка чтения файла: {ex.Message}");
-            }
+            catch (Exception ex) { Console.WriteLine($"[CONFIG] Ошибка: {ex.Message}"); }
             return new ServerSettings();
         }
 
         public async Task StartAsync()
         {
             IPAddress ip = IPAddress.Parse(_settings.Host);
-
             _listener = new TcpListener(ip, _settings.Port);
             _listener.Start();
-
             _isRunning = true;
             Console.WriteLine($"[SERVER] Запущен на {ip}:{_settings.Port}");
 
@@ -103,23 +91,12 @@ namespace Kruta.Server
                 while (_isRunning)
                 {
                     TcpClient tcpClient = await _listener.AcceptTcpClientAsync();
-                    Socket clientSocket = tcpClient.Client;
-                    var clientObject = new ClientObject(clientSocket, this);
-
-                    lock (Clients)
-                    {
-                        Clients.Add(clientObject);
-                    }
+                    var clientObject = new ClientObject(tcpClient.Client, this);
+                    lock (Clients) { Clients.Add(clientObject); }
                 }
             }
-            catch (Exception ex)
-            {
-                if (_isRunning) Console.WriteLine($"[SERVER] Ошибка: {ex.Message}");
-            }
-            finally
-            {
-                Stop();
-            }
+            catch (Exception ex) { if (_isRunning) Console.WriteLine($"[SERVER] Ошибка: {ex.Message}"); }
+            finally { Stop(); }
         }
 
         public void OnMessageReceived(ClientObject client, EAPacket packet)
@@ -127,34 +104,9 @@ namespace Kruta.Server
             try
             {
                 EAPacketType type = EAPacketTypeManager.GetTypeFromPacket(packet);
-                Console.WriteLine($"[SERVER] Получен пакет от клиента {client.Id}. Type={packet.PacketType} Subtype={packet.PacketSubtype} MappedType={type}");
-
-                if (_handlers.TryGetValue(type, out var handler))
-                {
-                    handler.Handle(client, packet);
-                }
-                else
-                {
-                    Console.WriteLine($"[WARN] Нет обработчика для типа: {type}");
-                }
+                if (_handlers.TryGetValue(type, out var handler)) handler.Handle(client, packet);
             }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"[SERVER] Исключение в OnMessageReceived: {ex}");
-            }
-        }
-
-        public void Stop()
-        {
-            _isRunning = false;
-            _listener?.Stop();
-
-            lock (Clients)
-            {
-                foreach (var client in Clients) client.Close();
-                Clients.Clear();
-            }
-            Console.WriteLine("[SERVER] Остановлен.");
+            catch (Exception ex) { Console.WriteLine($"[SERVER] Ошибка OnMessageReceived: {ex.Message}"); }
         }
 
         public void RemoveConnection(string id)
@@ -175,59 +127,37 @@ namespace Kruta.Server
             var hpPacket = EAPacket.Create(3, 2);
             hpPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(targetClient.Username));
             hpPacket.SetValueRaw(4, BitConverter.GetBytes(targetClient.PlayerData.Hp));
-
-            Console.WriteLine($"[SERVER_HP] Рассылка HP: {targetClient.Username} теперь имеет {targetClient.PlayerData.Hp} HP");
-
-            lock (Clients)
-            {
-                foreach (var client in Clients)
-                {
-                    client.Send(hpPacket);
-                }
-            }
+            lock (Clients) { foreach (var client in Clients) client.Send(hpPacket); }
         }
 
         public async Task StartFirstTurnAsync()
         {
             Console.WriteLine("[SERVER] Подготовка к первому ходу...");
             await Task.Delay(2000);
-
             lock (Clients)
             {
                 if (Clients.Count > 0)
                 {
                     CurrentPlayerIndex = 0;
                     foreach (var c in Clients) c.PlayerData.TurnCount = 0;
-
-                    // Первый игрок уже на 1-м ходу
-                    Clients[0].PlayerData.TurnCount = 1;
-
                     NotifyCurrentPlayer();
-                    Console.WriteLine($"[SERVER] Игра официально стартовала. Ходит: {Clients[0].Username}");
                 }
             }
         }
 
-        private void NotifyCurrentPlayer()
+        public void NotifyCurrentPlayer()
         {
             lock (Clients)
             {
                 if (Clients.Count == 0) return;
-
                 var activeClient = Clients[CurrentPlayerIndex];
                 activeClient.PlayerData.TurnCount++;
                 activeClient.PlayerData.Power = activeClient.PlayerData.TurnCount;
 
-                Console.WriteLine($"[POWER LOG] Игрок: {activeClient.Username}, Мощь: {activeClient.PlayerData.Power}");
-
                 var turnPacket = EAPacket.Create(5, 1);
                 turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
                 turnPacket.SetValueRaw(4, BitConverter.GetBytes(activeClient.PlayerData.Power));
-
-                foreach (var c in Clients)
-                {
-                    c.Send(turnPacket);
-                }
+                foreach (var c in Clients) c.Send(turnPacket);
             }
         }
 
@@ -236,31 +166,14 @@ namespace Kruta.Server
             lock (Clients)
             {
                 if (Clients.Count == 0) return;
-
                 int startingIndex = CurrentPlayerIndex;
                 bool foundAlive = false;
-
                 while (!foundAlive)
                 {
-                    CurrentPlayerIndex++;
-                    if (CurrentPlayerIndex >= Clients.Count) CurrentPlayerIndex = 0;
-
-                    if (Clients[CurrentPlayerIndex].PlayerData.Hp > 0)
-                    {
-                        foundAlive = true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"[SKIP] Игрок {Clients[CurrentPlayerIndex].Username} мертв. Пропускаем.");
-                    }
-
-                    if (CurrentPlayerIndex == startingIndex && !foundAlive)
-                    {
-                        Console.WriteLine("[CRITICAL] Все игроки мертвы.");
-                        return;
-                    }
+                    CurrentPlayerIndex = (CurrentPlayerIndex + 1) % Clients.Count;
+                    if (Clients[CurrentPlayerIndex].PlayerData.Hp > 0) foundAlive = true;
+                    if (CurrentPlayerIndex == startingIndex && !foundAlive) return;
                 }
-
                 NotifyCurrentPlayer();
             }
         }
@@ -269,42 +182,66 @@ namespace Kruta.Server
         {
             lock (Clients)
             {
-                if (Clients.Count <= CurrentPlayerIndex || Clients[CurrentPlayerIndex].Id != attacker.Id) return;
-                if (attacker.PlayerData.Power <= 0) return;
-
                 var target = Clients.FirstOrDefault(c => c.Username.Trim().Equals(targetName.Trim(), StringComparison.OrdinalIgnoreCase));
-                if (target == null) return;
+                if (target == null || attacker.PlayerData.Power <= 0) return;
 
-                int damage = attacker.PlayerData.Power;
+                target.PlayerData.Hp -= attacker.PlayerData.Power;
                 attacker.PlayerData.Power = 0;
-                target.PlayerData.Hp -= damage;
-
                 BroadcastPlayerHp(target);
 
-                var powerUpdatePacket = EAPacket.Create(5, 1);
-                powerUpdatePacket.SetValueRaw(3, Encoding.UTF8.GetBytes(attacker.Username));
-                powerUpdatePacket.SetValueRaw(4, BitConverter.GetBytes(0));
-                attacker.Send(powerUpdatePacket);
+                var powerUpdate = EAPacket.Create(5, 1);
+                powerUpdate.SetValueRaw(3, Encoding.UTF8.GetBytes(attacker.Username));
+                powerUpdate.SetValueRaw(4, BitConverter.GetBytes(0));
+                attacker.Send(powerUpdate);
             }
         }
-
-        // --- ЛОГИКА КАРТ ---
 
         public void ProcessPlayCard(ClientObject player, int cardId)
         {
             string cardName = GetCardNameById(cardId);
-            string message = $"Карта \"{cardName}\" разыграна!";
-            Console.WriteLine($"[GAME] {player.Username} разыграл: {cardName}");
-
+            string message = $"Карта \"{cardName}\" разыграна игроком {player.Username}!";
             var notifyPacket = EAPacket.Create(5, 3);
-            notifyPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(player.Username));
             notifyPacket.SetValueRaw(4, Encoding.UTF8.GetBytes(message));
+            lock (Clients) { foreach (var c in Clients) c.Send(notifyPacket); }
+        }
 
+        public void ProcessBuyCard(ClientObject player, int cardId)
+        {
+            lock (Baraholka)
+            {
+                int index = Array.IndexOf(Baraholka, cardId);
+                if (index == -1) return;
+
+                string cardName = GetCardNameById(cardId);
+                int nextCardId = 0;
+                if (MainDeck.Count > 0)
+                {
+                    nextCardId = MainDeck[0];
+                    MainDeck.RemoveAt(0);
+                }
+                Baraholka[index] = nextCardId;
+
+                string message = $"Карту \"{cardName}\" купил игрок {player.Username}";
+                var notifyPacket = EAPacket.Create(5, 3);
+                notifyPacket.SetValueRaw(4, Encoding.UTF8.GetBytes(message));
+                lock (Clients) { foreach (var c in Clients) c.Send(notifyPacket); }
+
+                BroadcastGameState();
+            }
+        }
+
+        public void BroadcastGameState()
+        {
             lock (Clients)
             {
-                foreach (var c in Clients)
+                foreach (var client in Clients)
                 {
-                    c.Send(notifyPacket);
+                    var p = EAPacket.Create(4, 1);
+                    byte[] baraholkaBytes = new byte[Baraholka.Length * 4];
+                    Buffer.BlockCopy(Baraholka, 0, baraholkaBytes, 0, baraholkaBytes.Length);
+                    p.SetValueRaw(6, baraholkaBytes);
+                    p.SetValueRaw(8, BitConverter.GetBytes(MainDeck.Count));
+                    client.Send(p);
                 }
             }
         }
@@ -323,5 +260,16 @@ namespace Kruta.Server
             10 => "Крутагидон",
             _ => "Неизвестная карта"
         };
+
+        public void Stop()
+        {
+            _isRunning = false;
+            _listener?.Stop();
+            lock (Clients)
+            {
+                foreach (var c in Clients) c.Close();
+                Clients.Clear();
+            }
+        }
     }
 }

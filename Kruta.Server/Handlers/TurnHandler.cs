@@ -18,42 +18,47 @@ namespace Kruta.Server.Handlers
 
                 var expectedPlayer = server.Clients[server.CurrentPlayerIndex];
 
-                // Проверка: только текущий игрок может совершать действия типа 5
+                // Проверка очереди хода
                 if (expectedPlayer.Id != client.Id)
                 {
-                    Console.WriteLine($"[WARN] Игрок {client.Username} пытался совершить действие не в свой ход!");
+                    Console.WriteLine($"[WARN] Игрок {client.Username} пытался действовать не в свой ход!");
                     return;
                 }
 
-                // Subtype 0: Завершение хода
-                if (packet.PacketSubtype == 0)
+                switch (packet.PacketSubtype)
                 {
-                    Console.WriteLine($"[GAME] Игрок {client.Username} завершил ход.");
-                    server.NextTurn();
-                }
+                    case 0: // Конец хода
+                        Console.WriteLine($"[GAME] Игрок {client.Username} завершил ход.");
+                        server.NextTurn();
+                        break;
 
-                // Subtype 2: Атака
-                else if (packet.PacketSubtype == 2)
-                {
-                    if (packet.HasField(3))
-                    {
-                        string targetName = Encoding.UTF8.GetString(packet.GetValueRaw(3)).Trim();
-                        server.ProcessAttack(client, targetName);
-                    }
-                }
+                    case 2: // Атака
+                        if (packet.HasField(3))
+                        {
+                            string targetName = Encoding.UTF8.GetString(packet.GetValueRaw(3)).Trim();
+                            server.ProcessAttack(client, targetName);
+                        }
+                        break;
 
-                // Subtype 3: Розыгрыш карты
-                else if (packet.PacketSubtype == 3)
-                {
-                    if (packet.HasField(3))
-                    {
-                        int cardId = BitConverter.ToInt32(packet.GetValueRaw(3), 0);
-                        server.ProcessPlayCard(client, cardId);
-                    }
-                }
-                else
-                {
-                    Console.WriteLine($"[WARN] Неизвестный подтип хода: {packet.PacketSubtype}");
+                    case 3: // Розыгрыш карты
+                        if (packet.HasField(3))
+                        {
+                            int cardId = BitConverter.ToInt32(packet.GetValueRaw(3), 0);
+                            server.ProcessPlayCard(client, cardId);
+                        }
+                        break;
+
+                    case 4: // КУПИТЬ КАРТУ (Новое)
+                        if (packet.HasField(3))
+                        {
+                            int cardId = BitConverter.ToInt32(packet.GetValueRaw(3), 0);
+                            server.ProcessBuyCard(client, cardId);
+                        }
+                        break;
+
+                    default:
+                        Console.WriteLine($"[WARN] Неизвестный подтип хода: {packet.PacketSubtype}");
+                        break;
                 }
             }
         }
