@@ -13,7 +13,8 @@ namespace Kruta.Shared.Models
         public int Id { get; set; }
         public string Name { get; set; }
         public int Hp { get; set; }
-        public int PowerGainedThisTurn { get; set; } // Мощь за текущий ход
+        public int Power { get; set; } // Мощь за текущий ход
+        public int TurnCount { get; set; } = 0; // Сколько раз игрок сходил
 
         public WizardPropertyToken WizardPropertyToken { get; set; } //ЖКС
         public FamiliarCard Familiar { get; set; } //Фамильяр

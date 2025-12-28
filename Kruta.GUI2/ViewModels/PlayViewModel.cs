@@ -34,6 +34,9 @@ namespace Kruta.GUI2.ViewModels
         [ObservableProperty]
         private bool _isMyTurn = false;
 
+        [ObservableProperty]
+        private int _myPower = 0;
+
         public ObservableCollection<OpponentDisplay> Opponents { get; } = new()
         {
             new OpponentDisplay { Position = "Top" },
@@ -66,9 +69,12 @@ namespace Kruta.GUI2.ViewModels
             // Тестовые карты в Барахолке (удалить позже)
             BaraholkaCards.Add(new SomeCardMini { Name = "Тест Карта", Cost = 5, CardId = 1 });
 
-            //// МЕНЯТЬ ТУТ
+            // --- ХАРДКОД СТАРТА ДЛЯ ПЕРВОГО ИГРОКА ---
+            // Если список имен пуст или мы там первые - даем себе мощь авансом
+            // Это перекроется сервером, когда придет пакет 5:1
             IsMyTurn = true;
-            GameStatus = "ТЕСТОВЫЙ РЕЖИМ: КНОПКА ДОЛЖНА БЫТЬ";
+            MyPower = 1;
+            GameStatus = "Вы ходите первым!";
         }
 
         // Вынесите логику в обертку
@@ -80,13 +86,6 @@ namespace Kruta.GUI2.ViewModels
         private void HandlePacket(EAPacket p)
         {
             System.Diagnostics.Debug.WriteLine($"[DEBUG] Получен пакет: Type={p.PacketType}, Subtype={p.PacketSubtype}");
-
-            ////// Тип 5: Управление ходом
-            //if (p.PacketType == 5)
-            //{
-            //    IsMyTurn = true;
-            //    GameStatus = "Ваш ход!";
-            //}
 
             // Тип 2, Подтип 1: Список игроков (или новый игрок)
             if (p.PacketType == 2 && p.PacketSubtype == 1)
@@ -148,48 +147,52 @@ namespace Kruta.GUI2.ViewModels
                     DeckRemainingCount = newCount;
                 }
 
-                // ПРОВЕРКА: Если я первый в списке игроков, я хожу первым
-                // _allPlayerNames[0] - это всегда тот, кто подключился первым
+                // ХАРДКОД ДЛЯ ПЕРВОГО ИГРОКА ПРИ СТАРТЕ
                 if (_allPlayerNames.Count > 0 && _allPlayerNames[0] == _networkService.PlayerName)
                 {
                     IsMyTurn = true;
-                    GameStatus = "Вы ходите первым!";
+                    MyPower = 1; // Устанавливаем 1 принудительно
+                    GameStatus = "Ваш ход! (Мощь: 1)";
                 }
                 else
                 {
                     IsMyTurn = false;
+                    MyPower = 0;
                     GameStatus = "Ожидание хода первого игрока...";
                 }
             }
 
+
             // Type 5: Turn, Subtype 1: Server объявляет текущего игрока
+            // В методе HandlePacket обновите обработку Типа 5 Подтипа 1
             if (p.PacketType == 5 && p.PacketSubtype == 1)
             {
-                // 1. Извлекаем имя того, кто сейчас ходит (из поля 3)
                 string activePlayerName = "";
-                if (p.HasField(3))
-                {
-                    activePlayerName = Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim();
-                }
+                int powerValue = 0;
 
-                // 2. Обновляем UI в главном потоке
-                MainThread.BeginInvokeOnMainThread(() =>
-                {
-                    // Сравниваем имя сервера с моим именем
+                if (p.HasField(3))
+                    activePlayerName = Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim();
+
+                if (p.HasField(4))
+                    powerValue = BitConverter.ToInt32(p.GetValueRaw(4), 0);
+
+                // ВАЖНЫЙ ЛОГ ДЛЯ КЛИЕНТА
+                System.Diagnostics.Debug.WriteLine($"[CLIENT RECEIVE] Ход игрока: {activePlayerName}, Пришедшая мощь: {powerValue}");
+
+                MainThread.BeginInvokeOnMainThread(() => {
                     if (activePlayerName == _networkService.PlayerName)
                     {
-                        IsMyTurn = true; // Включает кнопку
-                        GameStatus = "ВАШ ХОД! ДЕЙСТВУЙТЕ!";
+                        IsMyTurn = true;
+                        MyPower = powerValue; // Сюда должна прийти 1 от сервера в самом начале
                     }
                     else
                     {
-                        IsMyTurn = false; // Выключает кнопку
-                        GameStatus = $"Сейчас ходит: {activePlayerName}";
+                        IsMyTurn = false;
                     }
-
-                    
                 });
             }
+
+
         }
 
         // Команда кнопки (у тебя она уже почти правильная, проверяем)

@@ -206,29 +206,29 @@ namespace Kruta.Server
         // В GameServer2.cs
         public async Task StartFirstTurnAsync()
         {
-            Console.WriteLine("[SERVER] Ожидание прогрузки клиентов (3 сек)...");
-            await Task.Delay(3000); // Время, чтобы смартфоны успели открыть страницу
+            Console.WriteLine("[SERVER] Подготовка к первому ходу...");
+            await Task.Delay(2000);
 
             lock (Clients)
             {
                 if (Clients.Count > 0)
                 {
-                    // Устанавливаем индекс на первого игрока
                     CurrentPlayerIndex = 0;
 
-                    var firstPlayer = Clients[0];
+                    // 1. Сбрасываем всем в 0
+                    foreach (var c in Clients) c.PlayerData.TurnCount = 0;
 
-                    // Создаем пакет "Твой ход"
-                    var turnPacket = EAPacket.Create(5, 1);
+                    // --- ВОТ ЭТА СТРОКА РЕШАЕТ ПРОБЛЕМУ ---
+                    // Говорим серверу, что ПЕРВЫЙ игрок УЖЕ находится на своем 1-м ходу
+                    Clients[0].PlayerData.TurnCount = 1;
+                    // --------------------------------------
 
-                    // Отправляем конкретно первому подключившемуся
-                    firstPlayer.Send(turnPacket);
+                    // Теперь, когда ты нажмешь "Конец хода", сервер переключит на второго,
+                    // а когда вернется к тебе, он прибавит к этой единице еще одну и пришлет 2.
 
-                    Console.WriteLine($"[SERVER] Игра началась! Первый ход передан: {firstPlayer.Username}");
-                }
-                else
-                {
-                    Console.WriteLine("[SERVER] Ошибка: Нет игроков для начала хода.");
+                    NotifyCurrentPlayer(); // Этот метод разошлет пакет 5:1 (Игрок 1, Мощь 1)
+
+                    Console.WriteLine($"[SERVER] Игра официально стартовала. Ходит: {Clients[0].Username}");
                 }
             }
         }
@@ -240,18 +240,22 @@ namespace Kruta.Server
             {
                 if (Clients.Count == 0) return;
 
-                // Берем текущего игрока по индексу
                 var activeClient = Clients[CurrentPlayerIndex];
 
-                Console.WriteLine($"[GAME] Новый активный игрок: {activeClient.Username} (Index: {CurrentPlayerIndex})");
+                // ЛОГИКА МОЩИ
+                int oldTurnCount = activeClient.PlayerData.TurnCount;
+                activeClient.PlayerData.TurnCount++; // Увеличиваем счетчик ходов
+                activeClient.PlayerData.Power = activeClient.PlayerData.TurnCount;
 
-                // Создаем пакет (Type 5: Turn, Subtype 1: Update Status)
+                Console.WriteLine($"[POWER LOG] Игрок: {activeClient.Username}");
+                Console.WriteLine($"[POWER LOG] Старый TurnCount: {oldTurnCount}");
+                Console.WriteLine($"[POWER LOG] НОВЫЙ TurnCount: {activeClient.PlayerData.TurnCount}");
+                Console.WriteLine($"[POWER LOG] Отправляемая Мощь (Power): {activeClient.PlayerData.Power}");
+
                 var turnPacket = EAPacket.Create(5, 1);
-
-                // Поле 3: Имя игрока, который должен сейчас ходить
                 turnPacket.SetValueRaw(3, Encoding.UTF8.GetBytes(activeClient.Username));
+                turnPacket.SetValueRaw(4, BitConverter.GetBytes(activeClient.PlayerData.Power));
 
-                // Рассылаем пакет ВСЕМ игрокам
                 foreach (var c in Clients)
                 {
                     c.Send(turnPacket);
@@ -266,17 +270,24 @@ namespace Kruta.Server
             {
                 if (Clients.Count == 0) return;
 
+                Console.WriteLine("\n=== [NEXT TURN START] ===");
+                Console.WriteLine($"[LOG] Игрок {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex}) закончил ход.");
+
                 // Увеличиваем индекс
                 CurrentPlayerIndex++;
 
                 // Если вышли за пределы списка, возвращаемся к началу (цикл)
                 if (CurrentPlayerIndex >= Clients.Count)
                 {
+                    Console.WriteLine("[LOG] Достигнут конец списка игроков. Переход на КРУГ 2 (Индекс -> 0)");
                     CurrentPlayerIndex = 0;
                 }
 
+                Console.WriteLine($"[LOG] Следующий по очереди: {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex})");
+
                 // Уведомляем всех
                 NotifyCurrentPlayer();
+                Console.WriteLine("=== [NEXT TURN END] ===\n");
             }
         }
     }

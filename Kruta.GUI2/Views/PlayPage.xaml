@@ -116,6 +116,7 @@
         </VerticalStackLayout>
 
         <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="5">
+
             <Button Text="ЗАВЕРШИТЬ ХОД"
                     Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EndTurnCommand}"
                     IsVisible="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}"
@@ -134,8 +135,17 @@
 
             <HorizontalStackLayout HorizontalOptions="Center" Spacing="15" Margin="0,5">
                 <Label Text="ВАШИ КАРТЫ" TextColor="White" FontAttributes="Bold" VerticalOptions="Center"/>
+
                 <Frame BorderColor="Lime" BackgroundColor="#2000FF00" Padding="10,2" HasShadow="False">
                     <Label Text="{Binding MyHealth, StringFormat='{0} HP'}" TextColor="Lime" FontAttributes="Bold" FontSize="16"/>
+                </Frame>
+
+                <Frame BorderColor="Cyan" BackgroundColor="#2000FFFF" Padding="10,2" HasShadow="False">
+                    <HorizontalStackLayout Spacing="5">
+                        <Label Text="⚡" VerticalOptions="Center" TextColor="Cyan" />
+                        <Label Text="{Binding MyPower, StringFormat='{0} МОЩЬ'}" 
+                                TextColor="Cyan" FontAttributes="Bold" FontSize="16"/>
+                    </HorizontalStackLayout>
                 </Frame>
             </HorizontalStackLayout>
 
