@@ -12,7 +12,7 @@ namespace Kruta.Server
         public string Id { get; private set; } = Guid.NewGuid().ToString(); //id клиента/сессии
         public string Username { get; set; } = "Player"; //изначально просто ставим имя Player
 
-        public Player PlayerData { get; set; } //полноценная модель игрока для игры
+        public Player PlayerData { get; set; } = new Player(); //полноценная модель игрока для игры
         public bool IsReady { get; set; } //готов ли к игре после регистрации
 
         private List<byte> _accumulatedData = new List<byte>(); //чтобы не было потери данных при возможном чтении всего буффера сокета не до конца
@@ -28,6 +28,9 @@ namespace Kruta.Server
         {
             _socket = socket;
             _gameServer2 = gameServer2;
+
+            PlayerData.Name = Username;
+            PlayerData.Hp = 20;
 
             // Запускаем поток прослушивания конкретно для этого клиента
             _clientThread = new Thread(Listen);

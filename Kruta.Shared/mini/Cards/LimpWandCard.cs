@@ -10,109 +10,114 @@ namespace Kruta.Shared.Mini.Cards
     // --- 1. ВЯЛАЯ ПАЛОЧКА ---
     public class LimpWandCard : ICardMini
     {
-        public int CardId { get; set; } = 1;
-        public int Cost { get; set; } = 0;
-        public string Name { get; set; } = "Вялая палочка";
-        public int Initiative { get; set; } = -1;
-        public string Description { get; set; } = "(Эффекта нет.)";
+        public int CardId => 1;
+        public string Name => "Limp Wand";
+        public int Cost => 2;
+        public int PowerBonus => 1;
+        public int HealthBonus => 0;
+        public int Damage => 0;
+        public int DrawCount => 0;
     }
 
-    // --- 2. БОЕВАЯ САКСЕКИРА ---
     public class BattleSaxCard : ICardMini
     {
-        public int CardId { get; set; } = 2;
-        public int Cost { get; set; } = 5;
-        public string Name { get; set; } = "Боевая Саксекира";
-        public int Initiative { get; set; } = 1;
-        public int PowerBonus { get; set; } = 2; // +2 мощи
-        public int DamageToSides { get; set; } = 5; // Урон левому и правому
-        public string Description { get; set; } = "Нанеси 5 урона левому и правому врагам.";
+        public int CardId => 2;
+        public string Name => "Battle Sax";
+        public int Cost => 3;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 2;
+        public int DrawCount => 0;
     }
 
-    // --- 3. ПШИК ---
     public class FizzleCard : ICardMini
     {
-        public int CardId { get; set; } = 3;
-        public int Cost { get; set; } = 0;
-        public string Name { get; set; } = "Пшик";
-        public int Initiative { get; set; } = 0;
-        public string Description { get; set; } = "(Эффекта нет.)";
+        public int CardId => 3;
+        public string Name => "Fizzle";
+        public int Cost => 1;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 1;
+        public int DrawCount => 0;
     }
 
-    // --- 4. РЫЦАРЬ-СОПЛЕНОСЕЦ ---
     public class SnotKnightCard : ICardMini
     {
-        public int CardId { get; set; } = 4;
-        public int Cost { get; set; } = 2;
-        public string Name { get; set; } = "Рыцарь-Сопленосец";
-        public int Initiative { get; set; } = 1;
-        public int PowerBonus { get; set; } = 2; // +2 мощи
+        public int CardId => 4;
+        public string Name => "Snot Knight";
+        public int Cost => 3;
+        public int PowerBonus => 0;
+        public int HealthBonus => 2;
+        public int Damage => 1;
+        public int DrawCount => 0;
     }
 
-    // --- 5. ДВОЙНЯШКИ ---
     public class TwinsCard : ICardMini
     {
-        public int CardId { get; set; } = 5;
-        public int Cost { get; set; } = 5;
-        public string Name { get; set; } = "Двойняшки";
-        public int Initiative { get; set; } = 1;
-        public int CardsToDraw { get; set; } = 2; // Возьми 2 карты
+        public int CardId => 5;
+        public string Name => "Twins";
+        public int Cost => 2;
+        public int PowerBonus => 1;
+        public int HealthBonus => 0;
+        public int Damage => 1;
+        public int DrawCount => 0;
     }
 
-    // --- 6. ПАЛОЧКА ---
     public class WandCard : ICardMini
     {
-        public int CardId { get; set; } = 6;
-        public int Cost { get; set; } = 0;
-        public string Name { get; set; } = "Палочка";
-        public int Initiative { get; set; } = 0;
-        public int PowerBonus { get; set; } = 1; // +1 мощь
-        public int Damage { get; set; } = 1; // Нанеси 1 урон
+        public int CardId => 6;
+        public string Name => "Wand";
+        public int Cost => 1;
+        public int PowerBonus => 0;
+        public int HealthBonus => 1;
+        public int Damage => 0;
+        public int DrawCount => 0;
     }
 
-    // --- 7. ЗНАК ---
     public class SignCard : ICardMini
     {
-        public int CardId { get; set; } = 7;
-        public int Cost { get; set; } = 0;
-        public string Name { get; set; } = "Знак";
-        public int Initiative { get; set; } = 0;
-        public int PowerBonus { get; set; } = 1; // +1 мощь
+        public int CardId => 7;
+        public string Name => "Sign";
+        public int Cost => 1;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 0;
+        public int DrawCount => 1; // Добор карты
     }
 
-    // --- 8. ШАЛЬНАЯ МАГИЯ ---
     public class WildMagicCard : ICardMini
     {
-        public int CardId { get; set; } = 8;
-        public int Cost { get; set; } = 3;
-        public string Name { get; set; } = "Шальная магия";
-        public int Initiative { get; set; } = 1;
-
-        // FALSE = +2 мощи (по умолчанию)
-        // TRUE = Сыграть верхнюю карту (в твоем упрощении - взять карту)
-        public bool IsAlternativeEffect { get; set; } = false;
-
-        public int PowerBonus { get; set; } = 2;
+        public int CardId => 8;
+        public string Name => "Wild Magic";
+        public int Cost => 2;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 2;
+        public int DrawCount => 1;
     }
 
-    // --- 9. ОГНИЩЕ ---
     public class InfernoCard : ICardMini
     {
-        public int CardId { get; set; } = 9;
-        public int Cost { get; set; } = 5;
-        public string Name { get; set; } = "Огнище";
-        public int Initiative { get; set; } = 2;
-        public int PowerBonus { get; set; } = 3; // +3 мощи
+        public int CardId => 9;
+        public string Name => "Inferno";
+        public int Cost => 5;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 3;
+        public int DrawCount => 0;
     }
 
-    // --- 10. КРУТАГИДОН! ---
     public class KrutagidonCard : ICardMini
     {
-        public int CardId { get; set; } = 10;
-        public int Cost { get; set; } = 7;
-        public string Name { get; set; } = "Крутагидон!";
-        public int Initiative { get; set; } = 2;
-        public int PowerBonus { get; set; } = 3; // +3 мощи
-        public int DamageToAll { get; set; } = 7; // 7 урона каждому врагу
+        public int CardId => 10;
+        public string Name => "Krutagidon";
+        public int Cost => 7;
+        public int PowerBonus => 0;
+        public int HealthBonus => 0;
+        public int Damage => 5;
+        public int DrawCount => 0;
+
+        // Дополнительное поле для массового урона
+        public int DamageToAll { get; set; } = 2;
     }
 }

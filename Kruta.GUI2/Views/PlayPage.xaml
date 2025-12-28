@@ -3,13 +3,31 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:vm="clr-namespace:Kruta.GUI2.ViewModels"
              x:Class="Kruta.GUI2.Views.PlayPage"
+             x:Name="ThisPage"
              BackgroundColor="#1B3F2F"
              Title="Игровое поле">
 
     <ContentPage.Resources>
+        <!-- Стили -->
+        <Style x:Key="HealthLabelStyle" TargetType="Label">
+            <Setter Property="TextColor" Value="#FF4C4C" />
+            <Setter Property="FontAttributes" Value="Bold" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+        </Style>
+
+        <Style x:Key="HealthBadgeStyle" TargetType="Frame">
+            <Setter Property="Padding" Value="5,2" />
+            <Setter Property="BackgroundColor" Value="#30000000" />
+            <Setter Property="BorderColor" Value="Red" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="HorizontalOptions" Value="Center" />
+            <Setter Property="HasShadow" Value="False" />
+        </Style>
+
         <Style x:Key="OpponentCardBase" TargetType="Rectangle">
-            <Setter Property="WidthRequest" Value="55" />
-            <Setter Property="HeightRequest" Value="85" />
+            <Setter Property="WidthRequest" Value="45" />
+            <Setter Property="HeightRequest" Value="70" />
             <Setter Property="RadiusX" Value="5" />
             <Setter Property="RadiusY" Value="5" />
             <Setter Property="StrokeThickness" Value="2" />
@@ -19,8 +37,8 @@
         </Style>
 
         <Style x:Key="MyCardStyle" TargetType="Frame">
-            <Setter Property="WidthRequest" Value="75" />
-            <Setter Property="HeightRequest" Value="115" />
+            <Setter Property="WidthRequest" Value="80" />
+            <Setter Property="HeightRequest" Value="140" />
             <Setter Property="BackgroundColor" Value="White" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="0" />
@@ -28,246 +46,193 @@
             <Setter Property="BorderColor" Value="Gray" />
         </Style>
 
-        <DataTemplate x:Key="CardTemplate">
+        <Style x:Key="AttackButtonStyle" TargetType="Button">
+            <Setter Property="Text" Value="АТАКА" />
+            <Setter Property="BackgroundColor" Value="#8B0000" />
+            <Setter Property="TextColor" Value="White" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="HeightRequest" Value="30" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="CornerRadius" Value="5" />
+            <Setter Property="Command" Value="{Binding Source={x:Reference ThisPage}, Path=BindingContext.AttackOpponentCommand}" />
+            <Setter Property="CommandParameter" Value="{Binding Name}" />
+        </Style>
+
+        <!-- Шаблон карты руки -->
+        <DataTemplate x:Key="HandCardTemplate">
             <Frame Style="{StaticResource MyCardStyle}" BorderColor="Gold" BackgroundColor="#F0F0F0">
-                <Grid RowDefinitions="Auto, *, Auto">
-                    <Label Text="{Binding Cost, StringFormat='Cost: {0}'}" 
-                   TextColor="DarkGoldenrod" FontAttributes="Bold" FontSize="10" Margin="2,0"/>
+                <VerticalStackLayout Spacing="2" Padding="2">
+                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="12" HorizontalTextAlignment="Center"/>
+                    <ScrollView HeightRequest="80">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Text="{Binding Damage, StringFormat='Урон: {0}'}" FontSize="10" TextColor="Red"/>
+                            <Label Text="{Binding HealthBonus, StringFormat='Лечение: {0}'}" FontSize="10" TextColor="Green"/>
+                            <Label Text="{Binding PowerBonus, StringFormat='Мощь: {0}'}" FontSize="10" TextColor="Cyan"/>
+                            <Label Text="{Binding DrawCount, StringFormat='Добор: {0}'}" FontSize="10" TextColor="Purple"/>
+                            <Label Text="{Binding Description}" FontSize="9" TextColor="Black" LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                    <HorizontalStackLayout Spacing="5">
+                        <Button Text="СЫГРАТЬ" 
+                                Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.PlayCardCommand}" 
+                                CommandParameter="{Binding .}"
+                                FontSize="10"
+                                Margin="2"
+                                BackgroundColor="Gold"
+                                TextColor="Black"
+                                CornerRadius="5"
+                                IsEnabled="{Binding Source={x:Reference ThisPage}, Path=BindingContext.CanPlaySelectedCard}"/>
+                        <Button Text="ЦЕЛЬ" 
+                                Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.SelectTargetCommand}"
+                                CommandParameter="{Binding .}"
+                                FontSize="10"
+                                Margin="2"
+                                BackgroundColor="#8B0000"
+                                TextColor="White"
+                                CornerRadius="5"/>
+                    </HorizontalStackLayout>
+                </VerticalStackLayout>
+            </Frame>
+        </DataTemplate>
 
-                    <VerticalStackLayout Grid.Row="1" VerticalOptions="Center" HorizontalOptions="Center">
-                        <Label Text="{Binding Name}" TextColor="Black" 
-                       HorizontalTextAlignment="Center" FontSize="11" FontAttributes="Bold" />
-                        <Label Text="{Binding CardId, StringFormat='ID: {0}'}" 
-                       TextColor="Gray" FontSize="9" HorizontalOptions="Center" />
-                    </VerticalStackLayout>
-
-                    <Label Grid.Row="2" Text="{Binding Initiative}" TextColor="Blue" 
-                   HorizontalOptions="End" FontSize="10" Margin="2"/>
-                </Grid>
+        <!-- Шаблон карты Барахолки -->
+        <DataTemplate x:Key="BaraholkaCardTemplate">
+            <Frame Style="{StaticResource MyCardStyle}" BorderColor="Silver" BackgroundColor="#E0E0E0">
+                <VerticalStackLayout Spacing="2" Padding="2">
+                    <Label Text="{Binding Name}" FontAttributes="Bold" FontSize="12" HorizontalTextAlignment="Center"/>
+                    <ScrollView HeightRequest="80">
+                        <VerticalStackLayout Spacing="1">
+                            <Label Text="{Binding Cost, StringFormat='Стоимость: {0}'}" FontSize="10" TextColor="DarkGoldenrod"/>
+                            <Label Text="{Binding Damage, StringFormat='Урон: {0}'}" FontSize="10" TextColor="Red"/>
+                            <Label Text="{Binding HealthBonus, StringFormat='Лечение: {0}'}" FontSize="10" TextColor="Green"/>
+                            <Label Text="{Binding PowerBonus, StringFormat='Мощь: {0}'}" FontSize="10" TextColor="Cyan"/>
+                            <Label Text="{Binding DrawCount, StringFormat='Добор: {0}'}" FontSize="10" TextColor="Purple"/>
+                            <Label Text="{Binding Description}" FontSize="9" TextColor="Black" LineBreakMode="WordWrap"/>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </VerticalStackLayout>
             </Frame>
         </DataTemplate>
     </ContentPage.Resources>
 
-    <Grid RowDefinitions="160, *, 180" 
-          ColumnDefinitions="140, *, 140" 
-          Padding="15">
+    <Grid RowDefinitions="Auto, *, Auto" 
+          ColumnDefinitions="120, *, 120" 
+          Padding="10">
 
-        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" Spacing="10">
-            <Label Text="KRUTA" FontSize="48" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
+        <!-- Центр и Барахолка -->
+        <VerticalStackLayout Grid.Row="1" Grid.Column="1" VerticalOptions="Center" HorizontalOptions="Center" Spacing="5">
+            <Label Text="KRUTA" FontSize="40" FontAttributes="Bold" TextColor="White" Opacity="0.1" HorizontalOptions="Center" />
+            <Label Text="{Binding GameStatus}" FontSize="18" TextColor="Yellow" FontAttributes="Bold" HorizontalOptions="Center" />
 
-            <Label Text="БАРАХОЛКА" HorizontalOptions="Center" TextColor="Yellow" FontAttributes="Bold" />
-
-            <Grid ColumnDefinitions="100, *" HorizontalOptions="Center" WidthRequest="620">
-
-                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="5" HorizontalOptions="Center">
-                    <Frame BackgroundColor="#2C3E50" 
-               BorderColor="Goldenrod"
-               CornerRadius="5"
-               WidthRequest="70" 
-               HeightRequest="100"
-               Padding="0"
-               HasShadow="True">
-                        <Label Text="DECK" 
-                   TextColor="White" 
-                   HorizontalOptions="Center" 
-                   VerticalOptions="Center" 
-                   FontAttributes="Bold"
-                   Rotation="-45"/>
+            <Grid ColumnDefinitions="80, *" HorizontalOptions="Center" WidthRequest="550" HeightRequest="160">
+                <VerticalStackLayout Grid.Column="0" VerticalOptions="Center" Spacing="5">
+                    <Frame BackgroundColor="#2C3E50" BorderColor="Goldenrod" CornerRadius="5" WidthRequest="60" HeightRequest="90" Padding="0">
+                        <Label Text="DECK" TextColor="White" HorizontalOptions="Center" VerticalOptions="Center" FontAttributes="Bold" Rotation="-45"/>
                     </Frame>
-                    <Label Text="{Binding DeckRemainingCount, StringFormat='Карт: {0}'}" 
-               TextColor="Yellow" 
-               HorizontalOptions="Center"
-               FontAttributes="Bold"
-               FontSize="13"/>
+                    <Label Text="{Binding DeckRemainingCount, StringFormat='Карт: {0}'}" TextColor="Yellow" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12"/>
                 </VerticalStackLayout>
 
-                <CollectionView Grid.Column="1"
-                    ItemsSource="{Binding BaraholkaCards}" 
-                    ItemTemplate="{StaticResource CardTemplate}"
-                    HeightRequest="150" 
-                    WidthRequest="500"
-                    BackgroundColor="#0DFFFFFF">
+                <!-- Барахолка -->
+                <CollectionView Grid.Column="1" 
+                                ItemsSource="{Binding BaraholkaCards}" 
+                                ItemTemplate="{StaticResource BaraholkaCardTemplate}"
+                                HorizontalScrollBarVisibility="Never"
+                                VerticalScrollBarVisibility="Never">
                     <CollectionView.ItemsLayout>
                         <LinearItemsLayout Orientation="Horizontal" ItemSpacing="10" />
                     </CollectionView.ItemsLayout>
-                    <CollectionView.EmptyView>
-                        <Label Text="Барахолка пуста..." HorizontalOptions="Center" VerticalOptions="Center" TextColor="Gray"/>
-                    </CollectionView.EmptyView>
                 </CollectionView>
             </Grid>
-
-            <Label Text="{Binding GameStatus}" FontSize="16" TextColor="AntiqueWhite" HorizontalOptions="Center" />
         </VerticalStackLayout>
 
-        <VerticalStackLayout Grid.Row="0" Grid.Column="1" HorizontalOptions="Center" VerticalOptions="Start" Spacing="5"
-                             BindingContext="{Binding Opponents[0]}">
-            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12" />
-            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
+        <!-- Верхний оппонент -->
+        <VerticalStackLayout Grid.Row="0" Grid.Column="1" BindingContext="{Binding Opponents[0]}" VerticalOptions="Start" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <!-- Левый и правый оппоненты -->
+        <VerticalStackLayout Grid.Row="1" Grid.Column="0" BindingContext="{Binding Opponents[1]}" VerticalOptions="Center" Rotation="90" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <VerticalStackLayout Grid.Row="1" Grid.Column="2" BindingContext="{Binding Opponents[2]}" VerticalOptions="Center" Rotation="-90" Spacing="5">
+            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" />
+            <Button Style="{StaticResource AttackButtonStyle}">
+                <Button.Triggers>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.MyPower}" Value="0">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                    <DataTrigger TargetType="Button" Binding="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}" Value="False">
+                        <Setter Property="IsVisible" Value="False"/>
+                    </DataTrigger>
+                </Button.Triggers>
+            </Button>
+            <Frame Style="{StaticResource HealthBadgeStyle}">
+                <Label Text="{Binding Health, StringFormat='{0} HP'}" Style="{StaticResource HealthLabelStyle}" />
+            </Frame>
+        </VerticalStackLayout>
+
+        <!-- Нижняя панель игрока -->
+        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="5">
+            <Button Text="ЗАВЕРШИТЬ ХОД"
+                    Command="{Binding Source={x:Reference ThisPage}, Path=BindingContext.EndTurnCommand}"
+                    IsVisible="{Binding Source={x:Reference ThisPage}, Path=BindingContext.IsMyTurn}"
+                    BackgroundColor="Gold" 
+                    TextColor="Black" 
+                    FontAttributes="Bold"
+                    WidthRequest="220" 
+                    HeightRequest="50" 
+                    CornerRadius="25" 
+                    HorizontalOptions="Center"/>
+            <HorizontalStackLayout HorizontalOptions="Center" Spacing="15" Margin="0,5">
+                <Label Text="ВАШИ КАРТЫ" TextColor="White" FontAttributes="Bold" VerticalOptions="Center"/>
+                <Frame BorderColor="Lime" BackgroundColor="#2000FF00" Padding="10,2" HasShadow="False">
+                    <Label Text="{Binding MyHealth, StringFormat='{0} HP'}" TextColor="Lime" FontAttributes="Bold" FontSize="16"/>
+                </Frame>
+                <Frame BorderColor="Cyan" BackgroundColor="#2000FFFF" Padding="10,2" HasShadow="False">
+                    <HorizontalStackLayout Spacing="5">
+                        <Label Text="⚡" VerticalOptions="Center" TextColor="Cyan" />
+                        <Label Text="{Binding MyPower, StringFormat='{0} МОЩЬ'}" TextColor="Cyan" FontAttributes="Bold" FontSize="16"/>
+                    </HorizontalStackLayout>
+                </Frame>
             </HorizontalStackLayout>
-        </VerticalStackLayout>
 
-        <VerticalStackLayout Grid.Row="1" Grid.Column="0" HorizontalOptions="Start" VerticalOptions="Center" Spacing="5" 
-                             Rotation="90" BindingContext="{Binding Opponents[1]}">
-            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12"/>
-            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Grid.Row="1" Grid.Column="2" HorizontalOptions="End" VerticalOptions="Center" Spacing="5" 
-                             Rotation="-90" BindingContext="{Binding Opponents[2]}">
-            <Label Text="{Binding Name}" TextColor="White" HorizontalOptions="Center" FontSize="12" />
-            <HorizontalStackLayout Spacing="-35" HorizontalOptions="Center">
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-                <Rectangle Style="{StaticResource OpponentCardBase}">
-                    <Rectangle.Triggers>
-                        <DataTrigger TargetType="Rectangle" Binding="{Binding IsConnected}" Value="True">
-                            <Setter Property="Fill" Value="White"/>
-                            <Setter Property="Stroke" Value="LightGray"/>
-                            <Setter Property="Opacity" Value="1"/>
-                        </DataTrigger>
-                    </Rectangle.Triggers>
-                </Rectangle>
-            </HorizontalStackLayout>
-        </VerticalStackLayout>
-
-        <VerticalStackLayout Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" VerticalOptions="End" Spacing="10">
-            <Label Text="ВАШИ КАРТЫ" HorizontalOptions="Center" TextColor="White" />
+            <!-- Рука игрока -->
             <CollectionView ItemsSource="{Binding MyHandCards}" 
-                ItemTemplate="{StaticResource CardTemplate}"
-                HeightRequest="160"
-                BackgroundColor="#0DFFFFFF">
+                            ItemTemplate="{StaticResource HandCardTemplate}" 
+                            HeightRequest="140"
+                            VerticalOptions="End"
+                            HorizontalScrollBarVisibility="Never">
                 <CollectionView.ItemsLayout>
-                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="5" />
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8" />
                 </CollectionView.ItemsLayout>
             </CollectionView>
         </VerticalStackLayout>
-        
-        
-
     </Grid>
 </ContentPage>

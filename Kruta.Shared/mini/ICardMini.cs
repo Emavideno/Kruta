@@ -6,10 +6,12 @@ namespace Kruta.Shared.Mini
 {
     public interface ICardMini
     {
-        public int CardId { get; set; } //id (если не нужно - убери)
-        public int Cost { get; set; } //стоимость
-
-        //public int Power { get; set; } //сколько дает мощи (на будущее)
-        //public string pathToImage { get; set; } //ссылка на картинку (на будущее)
+        int CardId { get; }
+        string Name { get; }
+        int Cost { get; }
+        int PowerBonus { get; }  // Добавляет мощь
+        int HealthBonus { get; } // Лечит (Initiative)
+        int Damage { get; }      // Прямой урон
+        int DrawCount { get; }   // Добор карт
     }
 }
