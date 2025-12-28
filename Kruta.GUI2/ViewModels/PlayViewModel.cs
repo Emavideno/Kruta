@@ -35,6 +35,10 @@ namespace Kruta.GUI2.ViewModels
         [ObservableProperty]
         private bool _isDead = false;
 
+        // --- НОВОЕ СВОЙСТВО ПОБЕДЫ ---
+        [ObservableProperty]
+        private bool _isWinner = false;
+
         public ObservableCollection<OpponentDisplay> Opponents { get; } = new()
         {
             new OpponentDisplay { Position = "Top" },
@@ -116,9 +120,12 @@ namespace Kruta.GUI2.ViewModels
                         var opponent = Opponents.FirstOrDefault(o => o.Name == targetName);
                         if (opponent != null)
                         {
-                            opponent.Health = newHp; // Свойство IsDead в OpponentDisplay обновится само
+                            opponent.Health = newHp;
                         }
                     }
+
+                    // --- ПРОВЕРКА НА ПОБЕДУ ПОСЛЕ ЛЮБОГО ИЗМЕНЕНИЯ HP ---
+                    CheckWinCondition();
                 }
             }
 
@@ -157,8 +164,8 @@ namespace Kruta.GUI2.ViewModels
 
                 if (activePlayerName == _networkService.PlayerName)
                 {
-                    IsMyTurn = !IsDead; // Не даем ходить, если мертв
-                    MyPower = IsDead ? 0 : powerValue;
+                    IsMyTurn = !IsDead && !IsWinner; // Не даем ходить, если мертв или уже победил
+                    MyPower = (IsDead || IsWinner) ? 0 : powerValue;
                 }
                 else
                 {
@@ -167,10 +174,32 @@ namespace Kruta.GUI2.ViewModels
             }
         }
 
+        // --- НОВЫЙ МЕТОД ЛОГИКИ ПОБЕДЫ ---
+        private void CheckWinCondition()
+        {
+            // Если мы уже мертвы, победить не можем
+            if (IsDead) return;
+
+            // Проверяем, есть ли вообще за столом другие подключенные игроки
+            bool anyOpponentsJoined = Opponents.Any(o => o.IsConnected);
+
+            // Считаем тех, кто еще жив среди подключенных
+            int aliveOpponents = Opponents.Count(o => o.IsConnected && !o.IsDead);
+
+            // Если кто-то был подключен, но теперь живых врагов 0 — мы победили
+            if (anyOpponentsJoined && aliveOpponents == 0)
+            {
+                IsWinner = true;
+                IsMyTurn = false;
+                MyPower = 0;
+                GameStatus = "ПОБЕДА!";
+            }
+        }
+
         [RelayCommand]
         private void EndTurn()
         {
-            if (IsDead || !IsMyTurn) return;
+            if (IsDead || IsWinner || !IsMyTurn) return;
             IsMyTurn = false;
             GameStatus = "Передача хода...";
             _networkService.SendPacket(EAPacket.Create(5, 0));
@@ -195,12 +224,15 @@ namespace Kruta.GUI2.ViewModels
             {
                 opt.Name = "Свободно";
                 opt.IsConnected = false;
-                opt.Health = 20; // Сброс HP при пересборке
+                opt.Health = 20;
             }
 
             if (opponentsToShow.Count > 0) { Opponents[1].Name = opponentsToShow[0]; Opponents[1].IsConnected = true; }
             if (opponentsToShow.Count > 1) { Opponents[0].Name = opponentsToShow[1]; Opponents[0].IsConnected = true; }
             if (opponentsToShow.Count > 2) { Opponents[2].Name = opponentsToShow[2]; Opponents[2].IsConnected = true; }
+
+            // После пересборки стола тоже проверим состояние
+            CheckWinCondition();
         }
 
         private ICardMini CreateCardById(int id)
@@ -224,7 +256,7 @@ namespace Kruta.GUI2.ViewModels
         [RelayCommand]
         private void AttackOpponent(string targetName)
         {
-            if (IsDead || !IsMyTurn || MyPower <= 0) return;
+            if (IsDead || IsWinner || !IsMyTurn || MyPower <= 0) return;
             if (string.IsNullOrEmpty(targetName) || targetName == "Свободно") return;
 
             int dmg = MyPower;
@@ -245,10 +277,8 @@ namespace Kruta.GUI2.ViewModels
         [ObservableProperty]
         private int _health = 20;
 
-        // Вычисляемое свойство: мертв ли этот конкретный оппонент
         public bool IsDead => Health <= 0;
 
-        // Этот метод вызывается автоматически CommunityToolkit при изменении Health
         partial void OnHealthChanged(int value)
         {
             OnPropertyChanged(nameof(IsDead));

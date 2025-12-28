@@ -213,7 +213,6 @@
               BackgroundColor="#CC000000" 
               IsVisible="{Binding IsDead}"
               ZIndex="999">
-
             <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
                 <Label Text="ВЫ УМЕРЛИ" 
                        TextColor="Red" 
@@ -225,6 +224,28 @@
                     </Label.Shadow>
                 </Label>
                 <Label Text="Вы больше не можете совершать действия" 
+                       TextColor="White" 
+                       FontSize="18" 
+                       HorizontalOptions="Center" />
+            </VerticalStackLayout>
+        </Grid>
+
+        <Grid Grid.Row="0" Grid.RowSpan="3" 
+              Grid.Column="0" Grid.ColumnSpan="3"
+              BackgroundColor="#CC000000" 
+              IsVisible="{Binding IsWinner}"
+              ZIndex="1000">
+            <VerticalStackLayout VerticalOptions="Center" HorizontalOptions="Center" Spacing="20">
+                <Label Text="ВЫ ПОБЕДИЛИ!" 
+                       TextColor="Lime" 
+                       FontSize="60" 
+                       FontAttributes="Bold" 
+                       HorizontalOptions="Center">
+                    <Label.Shadow>
+                        <Shadow Brush="Black" Offset="5,5" Radius="10" Opacity="0.9" />
+                    </Label.Shadow>
+                </Label>
+                <Label Text="Вы — последний выживший герой" 
                        TextColor="White" 
                        FontSize="18" 
                        HorizontalOptions="Center" />
