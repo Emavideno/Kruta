@@ -263,6 +263,7 @@ namespace Kruta.Server
         }
 
         // Публичный метод для переключения на следующего
+        // Публичный метод для переключения на следующего живого игрока
         public void NextTurn()
         {
             lock (Clients)
@@ -272,19 +273,41 @@ namespace Kruta.Server
                 Console.WriteLine("\n=== [NEXT TURN START] ===");
                 Console.WriteLine($"[LOG] Игрок {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex}) закончил ход.");
 
-                // Увеличиваем индекс
-                CurrentPlayerIndex++;
+                int startingIndex = CurrentPlayerIndex;
+                bool foundAlive = false;
 
-                // Если вышли за пределы списка, возвращаемся к началу (цикл)
-                if (CurrentPlayerIndex >= Clients.Count)
+                // Цикл поиска следующего живого игрока
+                while (!foundAlive)
                 {
-                    Console.WriteLine("[LOG] Достигнут конец списка игроков. Переход на КРУГ 2 (Индекс -> 0)");
-                    CurrentPlayerIndex = 0;
+                    CurrentPlayerIndex++;
+
+                    // Если вышли за пределы списка, возвращаемся к началу
+                    if (CurrentPlayerIndex >= Clients.Count)
+                    {
+                        CurrentPlayerIndex = 0;
+                    }
+
+                    // Проверяем здоровье потенциального кандидата на ход
+                    if (Clients[CurrentPlayerIndex].PlayerData.Hp > 0)
+                    {
+                        foundAlive = true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[SKIP] Игрок {Clients[CurrentPlayerIndex].Username} мертв. Пропускаем ход.");
+                    }
+
+                    // Защита от бесконечного цикла (если вдруг все игроки умерли)
+                    if (CurrentPlayerIndex == startingIndex && !foundAlive)
+                    {
+                        Console.WriteLine("[CRITICAL] Все игроки мертвы или произошла ошибка очереди.");
+                        return;
+                    }
                 }
 
-                Console.WriteLine($"[LOG] Следующий по очереди: {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex})");
+                Console.WriteLine($"[LOG] Следующий живой игрок: {Clients[CurrentPlayerIndex].Username} (индекс {CurrentPlayerIndex})");
 
-                // Уведомляем всех
+                // Уведомляем всех о новом активном игроке
                 NotifyCurrentPlayer();
                 Console.WriteLine("=== [NEXT TURN END] ===\n");
             }

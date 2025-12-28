@@ -37,6 +37,9 @@ namespace Kruta.GUI2.ViewModels
         [ObservableProperty]
         private int _myPower = 0;
 
+        [ObservableProperty]
+        private bool _isDead = false;
+
         public ObservableCollection<OpponentDisplay> Opponents { get; } = new()
         {
             new OpponentDisplay { Position = "Top" },
@@ -112,7 +115,6 @@ namespace Kruta.GUI2.ViewModels
                     string targetName = Encoding.UTF8.GetString(p.GetValueRaw(3)).Trim();
                     int newHp = BitConverter.ToInt32(p.GetValueRaw(4), 0);
 
-                    // ЛОГ 1: Получение пакета
                     System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] СЕРВЕР ПРИСЛАЛ ОБНОВЛЕНИЕ: Игрок={targetName}, Новое HP={newHp}");
 
                     MainThread.BeginInvokeOnMainThread(() => {
@@ -120,6 +122,16 @@ namespace Kruta.GUI2.ViewModels
                         {
                             System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] Обновляю СВОЕ здоровье: {MyHealth} -> {newHp}");
                             MyHealth = newHp;
+
+                            // --- ЛОГИКА СМЕРТИ ---
+                            if (MyHealth <= 0)
+                            {
+                                IsDead = true;      // Включает Overlay "ВЫ УМЕРЛИ" в XAML
+                                IsMyTurn = false;   // Блокирует возможность хода
+                                GameStatus = "ВЫ УМЕРЛИ";
+                                System.Diagnostics.Debug.WriteLine("[GAME] Локальный игрок погиб.");
+                            }
+                            // ---------------------
                         }
                         else
                         {
@@ -131,9 +143,7 @@ namespace Kruta.GUI2.ViewModels
                             }
                             else
                             {
-                                // ЛОГ 2: Если не нашли оппонента в списке UI
                                 System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] ОШИБКА: Игрок {targetName} не найден в списке Opponents!");
-                                foreach (var opt in Opponents) System.Diagnostics.Debug.WriteLine($"[HP_DEBUG] В списке есть: '{opt.Name}'");
                             }
                         }
                     });
@@ -235,6 +245,7 @@ namespace Kruta.GUI2.ViewModels
         [RelayCommand]
         private void EndTurn()
         {
+            if (IsDead || !IsMyTurn) return;
             if (!IsMyTurn) return; // Защита на клиенте
 
             // Визуальный отклик мгновенно
@@ -315,6 +326,8 @@ namespace Kruta.GUI2.ViewModels
         [RelayCommand]
         private void AttackOpponent(string targetName)
         {
+            if (IsDead || !IsMyTurn) return; // Блокировка если мертв
+
             System.Diagnostics.Debug.WriteLine($"[ATTACK_DEBUG] Попытка атаки на {targetName}. Моя мощь: {MyPower}");
             if (!IsMyTurn) { System.Diagnostics.Debug.WriteLine("[ATTACK_DEBUG] Отмена: Не мой ход!"); return; }
 
